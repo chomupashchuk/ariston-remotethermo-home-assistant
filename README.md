@@ -49,7 +49,7 @@ With additional attributes if needed, which are described below.
 `ariston.set_data` - sets data in the boiler.
 
 ### Service attributes:
-`entity_id` - entity of Ariston `climate`.
+`entity_id` - **mandatory** entity of Ariston `climate`.
 
 `mode` - mode of the boiler: `off`, `summer`, `winter`.
 
