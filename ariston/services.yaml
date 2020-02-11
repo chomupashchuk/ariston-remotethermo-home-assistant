@@ -1,0 +1,18 @@
+set_data:
+  description: Set Ariston Data via HTTP
+  fields:
+    entity_id:
+      description: "(Mandatory) Climate 'enity_id' for Ariston heater"
+      example: climate.ariston
+    mode:
+      description: "(Optional) General mode: 'winter' or 'summer' or 'off'"
+      example: winter
+    ch_mode:
+      description: "(Optional) CH mode: 'manual' or 'scheduled'"
+      example: manual
+    ch_set_temperature:
+      description: "(Optional) Set CH temperature in C between '10.0' and '30.0' in steps of '0.5' (potentially can differ for different model)"
+      example: 21.5
+    dhw_set_temperature:
+      description: "(Optional) Set DHW temperature in C between '36' and '60' in steps of '1.0' (potentially can differ for different model)"
+      example: 39
