@@ -15,9 +15,9 @@ With additional attributes if needed, which are described below.
 
 
 ## Integration attributes
-**username** - **mandatory** user name used in https://www.ariston-net.remotethermo.com/
+**username** - **mandatory** user name used in https://www.ariston-net.remotethermo.com
 
-**password** - **mandatory** password used in https://www.ariston-net.remotethermo.com/
+**password** - **mandatory** password used in https://www.ariston-net.remotethermo.com
 *It is recommended for security purposes to not use your common password just in case.*
 
 **name** - friendly name for integration
