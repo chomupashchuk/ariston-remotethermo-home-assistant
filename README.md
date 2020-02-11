@@ -4,7 +4,7 @@ You are free to modify and distribute it, but it is distributed 'as is' with no 
 
 
 ## Integration installation
-In `/config` folder create `custom_components` folder in load source file in it
+In `/config` folder create `custom_components` folder and load source files folder in it
 In `configuration.yaml` include:
 ```
 ariston:
