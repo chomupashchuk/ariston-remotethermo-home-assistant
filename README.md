@@ -46,7 +46,7 @@ With additional attributes if needed, which are described below.
 
 
 ## Services
-`ariston.set_data` - sets data in the boiler.
+`ariston.set_data` - sets data in the boiler. Uses **max_retries** attribute from configuration.
 
 ### Service attributes:
 `entity_id` - **mandatory** entity of Ariston `climate`.
