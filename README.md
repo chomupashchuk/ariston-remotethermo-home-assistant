@@ -2,6 +2,8 @@
 Thin integration is a side project (my first integration) and was tested only with 1 zone climate. It logs in Ariston website and fetches/sets data on that site. Due to interaction with boiler it is time consuming process and thus intergation is relatively slow.
 You are free to modify and distribute it, but it is distributed 'as is' with no liability (see license file).
 
+Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
+
 
 ## Integration installation
 In `/config` folder create `custom_components` folder and load source files folder `ariston` in it
