@@ -30,7 +30,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Binary sensor types are defined like: Name, device class
 BINARY_SENSORS = {
-    PARAM_HOLIDAY_MODE: ("Hiliday Mode", None, "mdi:island"),
+    PARAM_HOLIDAY_MODE: ("Holiday Mode", None, "mdi:island"),
     PARAM_ONLINE: ("Online", DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
 }
