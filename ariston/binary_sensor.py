@@ -1,7 +1,6 @@
 """Suppoort for Ariston binary sensors."""
-from datetime import timedelta
 import logging
-
+from datetime import timedelta
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_HEAT,
@@ -18,8 +17,8 @@ from .const import (
     PARAM_ONLINE,
     PARAM_FLAME,
 )
-from .helpers import log_update_error, service_signal
 from .exceptions import AristonError
+from .helpers import log_update_error, service_signal
 
 """BINARY_SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 BINARY_SENSOR_SCAN_INTERVAL_SECS = 3
@@ -34,6 +33,7 @@ BINARY_SENSORS = {
     PARAM_ONLINE: ("Online", DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
 }
+
 
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up a binary sensor for Ariston."""
@@ -111,7 +111,8 @@ class AristonBinarySensor(BinarySensorDevice):
 
             if self._sensor_type == PARAM_HOLIDAY_MODE:
                 try:
-                    if self._api._ariston_data["zone"]["comfortTemp"]["value"] == self._api._ariston_data["zone"]["antiFreezeTemp"] or self._api._ariston_data["holidayEnabled"]:
+                    if self._api._ariston_data["zone"]["comfortTemp"]["value"] == self._api._ariston_data["zone"][
+                        "antiFreezeTemp"] or self._api._ariston_data["holidayEnabled"]:
                         self._state = True
                     else:
                         self._state = False
@@ -120,13 +121,13 @@ class AristonBinarySensor(BinarySensorDevice):
 
             elif self._sensor_type == PARAM_ONLINE:
                 self._state = self._api.available
-            
+
             elif self._sensor_type == PARAM_FLAME:
                 try:
                     self._state = self._api._ariston_data["flameSensor"]
                 except:
                     self._state = False
-            
+
         except AristonError as error:
             log_update_error(_LOGGER, "update", self.name, "binary sensor", error)
 

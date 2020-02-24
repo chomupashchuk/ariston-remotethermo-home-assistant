@@ -1,7 +1,6 @@
 """Support for Ariston water heaters."""
-from datetime import timedelta
 import logging
-
+from datetime import timedelta
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE,
@@ -12,6 +11,7 @@ from homeassistant.const import (
     CONF_NAME,
     TEMP_CELSIUS,
 )
+
 from .const import (
     CONF_POWER_ON,
     DATA_ARISTON,
@@ -37,6 +37,7 @@ SUPPORTED_OPERATIONS = [VAL_MODE_OFF, VAL_MODE_SUMMER, VAL_MODE_WINTER]
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
+
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Ariston water heater devices."""
@@ -66,7 +67,7 @@ class AristonWaterHeater(WaterHeaterDevice):
     def icon(self):
         """Return the name of the Water Heater device."""
         return "mdi:water-pump"
-    
+
     @property
     def unique_id(self) -> str:
         """Return the unique ID for this thermostat."""
@@ -118,12 +119,12 @@ class AristonWaterHeater(WaterHeaterDevice):
         except:
             target_temp = DEFAULT_TEMP
         return target_temp
- 
+
     @property
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
         return 1.0
-        
+
     @property
     def operation_list(self):
         """List of available operation modes."""

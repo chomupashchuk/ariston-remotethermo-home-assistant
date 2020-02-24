@@ -1,9 +1,8 @@
 """
 Adds support for the Ariston Boiler
 """
-from datetime import timedelta
 import logging
-
+from datetime import timedelta
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     CURRENT_HVAC_HEAT,
@@ -54,6 +53,7 @@ SUPPORT_FLAGS = SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE
 SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_AUTO]
 SUPPORTED_PRESETS = [VAL_MODE_SUMMER, VAL_MODE_WINTER, VAL_MODE_OFF]
 
+
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Setup the Ariston Platform."""
     if discovery_info is None:
@@ -76,7 +76,7 @@ class AristonThermostat(ClimateDevice):
     def icon(self):
         """Return the name of the Climate device."""
         return "mdi:water-boiler"
-    
+
     @property
     def name(self):
         """Return the name of the Climate device."""
@@ -146,7 +146,7 @@ class AristonThermostat(ClimateDevice):
                 elif climate_ch_mode == VAL_CH_MODE_SCHEDULED:
                     curr_hvac_mode = HVAC_MODE_AUTO
         except:
-          curr_hvac_mode = HVAC_MODE_OFF
+            curr_hvac_mode = HVAC_MODE_OFF
         return curr_hvac_mode
 
     @property
@@ -176,7 +176,8 @@ class AristonThermostat(ClimateDevice):
         try:
             if self.available:
                 curr_preset_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
-                if self._api._ariston_data["zone"]["comfortTemp"]["value"] == self._api._ariston_data["zone"]["antiFreezeTemp"] or self._api._ariston_data["holidayEnabled"]:
+                if self._api._ariston_data["zone"]["comfortTemp"]["value"] == self._api._ariston_data["zone"][
+                    "antiFreezeTemp"] or self._api._ariston_data["holidayEnabled"]:
                     curr_preset_mode = VAL_HOLIDAY
             else:
                 curr_preset_mode = VAL_OFFLINE
@@ -198,12 +199,12 @@ class AristonThermostat(ClimateDevice):
     def available(self):
         """Return True if entity is available."""
         return self._api.available
-        
+
     @property
     def target_temperature_step(self):
         """Return the supported step of target temperature."""
         return 0.5
-        
+
     def set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
@@ -215,7 +216,7 @@ class AristonThermostat(ClimateDevice):
             self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_MANUAL})
         elif hvac_mode == HVAC_MODE_AUTO:
             self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_SCHEDULED})
-            
+
     def set_preset_mode(self, preset_mode):
         """Set new target hvac mode."""
         if preset_mode in SUPPORTED_PRESETS:

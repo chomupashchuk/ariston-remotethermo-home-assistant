@@ -1,7 +1,6 @@
 """Suppoort for Ariston sensors."""
-from datetime import timedelta
 import logging
-
+from datetime import timedelta
 from homeassistant.const import CONF_NAME, CONF_SENSORS
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
@@ -20,9 +19,8 @@ from .const import (
     VALUE_TO_CH_MODE,
     VALUE_TO_MODE,
 )
-
-from .helpers import log_update_error, service_signal
 from .exceptions import AristonError
+from .helpers import log_update_error, service_signal
 
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 SENSOR_SCAN_INTERVAL_SECS = 3

@@ -1,7 +1,6 @@
 """Suppoort for Ariston switch."""
-from datetime import timedelta
 import logging
-
+from datetime import timedelta
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.const import CONF_SWITCHES, CONF_NAME
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -30,6 +29,7 @@ SWITCHES = {
     POWER: ("Power", "mdi:power"),
 }
 
+
 async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up a switches for Ariston."""
     if discovery_info is None:
@@ -44,6 +44,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
         ],
         True,
     )
+
 
 class AristonSwitch(SwitchDevice):
     """Switch for Ariston."""

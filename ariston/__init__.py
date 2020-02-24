@@ -1,14 +1,14 @@
 """Suppoort for Ariston."""
-from datetime import timedelta
+import copy
+import dateutil.parser
+import homeassistant.helpers.config_validation as cv
+import json
 import logging
 import requests
 import threading
-import voluptuous as vol
-import json
-import copy
-import dateutil.parser
 import time
-
+import voluptuous as vol
+from datetime import timedelta
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR
 from homeassistant.components.climate import DOMAIN as CLIMATE
 from homeassistant.components.sensor import DOMAIN as SENSOR
@@ -24,7 +24,6 @@ from homeassistant.const import (
     CONF_USERNAME,
 )
 from homeassistant.exceptions import Unauthorized, UnknownUser
-import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers import discovery
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import track_point_in_time
@@ -83,6 +82,7 @@ TIMER_SET_LOCK = 25
 
 _LOGGER = logging.getLogger(__name__)
 
+
 def _has_unique_names(devices):
     names = [device[CONF_NAME] for device in devices]
     vol.Schema(vol.Unique())(names)
@@ -97,7 +97,8 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_BINARY_SENSORS): vol.All(cv.ensure_list, [vol.In(BINARY_SENSORS)]),
         vol.Optional(CONF_SENSORS): vol.All(cv.ensure_list, [vol.In(SENSORS)]),
         vol.Optional(CONF_HVAC_OFF, default=DEFAULT_HVAC): vol.In(["OFF", "off", "Off", "summer", "SUMMER", "Summer"]),
-        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In(["WINTER", "winter", "Winter", "summer", "SUMMER", "Summer"]),
+        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In(
+            ["WINTER", "winter", "Winter", "summer", "SUMMER", "Summer"]),
         vol.Optional(CONF_MAX_RETRIES, default=DEFAULT_MAX_RETRIES): vol.All(int, vol.Range(min=0, max=65535)),
         vol.Optional(CONF_SWITCHES): vol.All(cv.ensure_list, [vol.In(SWITCHES)]),
     }
@@ -108,9 +109,10 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
+
 class AristonChecker():
     """Ariston checker"""
-    
+
     def __init__(self, hass, device, name, username, password, retries):
         """Initialize."""
         self._ariston_data = {}
@@ -184,7 +186,7 @@ class AristonChecker():
         self._login_session()
         if self._login and self._plant_id != "":
             if time.time() - self._set_time_start > TIMER_SET_LOCK:
-                #give time to read new data
+                # give time to read new data
                 url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                 with self._data_lock:
                     try:
@@ -206,7 +208,7 @@ class AristonChecker():
                             _LOGGER.warning("%s Unexpected reply %s", self, resp.status_code)
                             raise CommError
                         resp.raise_for_status()
-                        #successful data fetching
+                        # successful data fetching
                         self._get_time_end = time.time()
                         """
                         #uncomment below to store request time
@@ -222,11 +224,11 @@ class AristonChecker():
                         """
                         #uncomment below to log received data for troubleshooting purposes
                         with open('/config/tmp/data.json', 'w') as ariston_fetched:
-                        json.dump(self._ariston_data, ariston_fetched)
+                            json.dump(self._ariston_data, ariston_fetched)
                         """
                     except:
                         with self._plant_id_lock:
-                                self._login = False
+                            self._login = False
                         _LOGGER.warning("%s Invalid data received, not JSON", self)
                         raise CommError
             else:
@@ -258,7 +260,7 @@ class AristonChecker():
                     time_hour_minute = time_and_indic[0].split(":")
                     time_str_24h = str(int(time_hour_minute[0]) + 12) + time_hour_minute[1]
             else:
-                #just check that we have hrours and minutes
+                # just check that we have hrours and minutes
                 time_hour_minute = time_str_12h.split(":")
                 if time_hour_minute[0] == "" or time_hour_minute[1] == "":
                     time_str_24h = DEFAULT_TIME
@@ -272,10 +274,10 @@ class AristonChecker():
         self._login_session()
         with self._data_lock:
             if not self._set_new_data:
-                #scheduled setting
+                # scheduled setting
                 self._set_scheduled = False
             else:
-                #initial setting
+                # initial setting
                 self._set_new_data = False
                 self._set_retry = 0
             if self._login and self.available and self._plant_id != "":
@@ -290,10 +292,10 @@ class AristonChecker():
                 if PARAM_MODE in self._set_param:
                     if set_data["NewValue"]["mode"] == self._set_param[PARAM_MODE]:
                         if self._set_time_start < self._get_time_end:
-                            #value should be up to date and match to remove from setting
+                            # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_MODE]
                         else:
-                            #assume data was not yet changed
+                            # assume data was not yet changed
                             data_changed = True
                     else:
                         set_data["NewValue"]["mode"] = self._set_param[PARAM_MODE]
@@ -301,21 +303,22 @@ class AristonChecker():
                 if PARAM_DHW_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
                         if self._set_time_start < self._get_time_end:
-                            #value should be up to date and match to remove from setting
+                            # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         else:
-                            #assume data was not yet changed
+                            # assume data was not yet changed
                             data_changed = True
                     else:
                         set_data["NewValue"]["dhwTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         data_changed = True
                 if PARAM_CH_SET_TEMPERATURE in self._set_param:
-                    if set_data["NewValue"]["zone"]["comfortTemp"]["value"] == self._set_param[PARAM_CH_SET_TEMPERATURE]:
+                    if set_data["NewValue"]["zone"]["comfortTemp"]["value"] == self._set_param[
+                        PARAM_CH_SET_TEMPERATURE]:
                         if self._set_time_start < self._get_time_end:
-                            #value should be up to date and match to remove from setting
+                            # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_SET_TEMPERATURE]
                         else:
-                            #assume data was not yet changed
+                            # assume data was not yet changed
                             data_changed = True
                     else:
                         set_data["NewValue"]["zone"]["comfortTemp"]["value"] = self._set_param[PARAM_CH_SET_TEMPERATURE]
@@ -323,10 +326,10 @@ class AristonChecker():
                 if PARAM_CH_MODE in self._set_param:
                     if set_data["NewValue"]["zone"]["mode"]["value"] == self._set_param[PARAM_CH_MODE]:
                         if self._set_time_start < self._get_time_end:
-                            #value should be up to date and match to remove from setting
+                            # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_MODE]
                         else:
-                            #assume data was not yet changed
+                            # assume data was not yet changed
                             data_changed = True
                     else:
                         set_data["NewValue"]["zone"]["mode"]["value"] = self._set_param[PARAM_CH_MODE]
@@ -334,13 +337,13 @@ class AristonChecker():
                 if data_changed == True:
                     if not self._set_scheduled:
                         if self._set_retry < self._set_max_retries:
-                            #retry again after enough time to fetch data twice
+                            # retry again after enough time to fetch data twice
                             retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
                             track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
                             self._set_retry = self._set_retry + 1
                             self._set_scheduled = True
                         else:
-                            #no more retries, no need to keep changed data
+                            # no more retries, no need to keep changed data
                             if PARAM_MODE in self._set_param:
                                 del self._set_param[PARAM_MODE]
                             if PARAM_DHW_SET_TEMPERATURE in self._set_param:
@@ -373,22 +376,22 @@ class AristonChecker():
                     except CommError:
                         _LOGGER.warning('%s Request communication error', self)
                         raise
-                    #store data in reply, but note that in some cases in fact it is not set
+                    # store data in reply, but note that in some cases in fact it is not set
                     self._ariston_data = copy.deepcopy(resp.json())
                     _LOGGER.info('%s Data was changed', self)
                 else:
-                    _LOGGER.debug('%s Same data was used', self)         
+                    _LOGGER.debug('%s Same data was used', self)
             else:
-                #api is down
+                # api is down
                 if not self._set_scheduled:
                     if self._set_retry < self._set_max_retries:
-                        #retry again after enough time to fetch data twice
+                        # retry again after enough time to fetch data twice
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
                         track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
                         self._set_retry = self._set_retry + 1
                         self._set_scheduled = True
                     else:
-                        #no more retries, no need to keep changed data
+                        # no more retries, no need to keep changed data
                         if PARAM_MODE in self._set_param:
                             del self._set_param[PARAM_MODE]
                         if PARAM_DHW_SET_TEMPERATURE in self._set_param:
@@ -417,7 +420,7 @@ class AristonChecker():
                 if PARAM_DHW_SET_TEMPERATURE in parameter_list:
                     wanted_dhw_temperature = str(parameter_list[PARAM_DHW_SET_TEMPERATURE]).lower()
                     try:
-                        #round to nearest 1
+                        # round to nearest 1
                         temperature = round(float(wanted_dhw_temperature))
                         if temperature >= self._ariston_data["dhwTemp"]["min"] and temperature <= \
                                 self._ariston_data["dhwTemp"]["max"]:
@@ -432,7 +435,7 @@ class AristonChecker():
                 if PARAM_CH_SET_TEMPERATURE in parameter_list:
                     wanted_ch_temperature = str(parameter_list[PARAM_CH_SET_TEMPERATURE]).lower()
                     try:
-                        #round to nearest 0.5
+                        # round to nearest 0.5
                         temperature = round(float(wanted_ch_temperature) * 2.0) / 2.0
                         if temperature >= self._ariston_data["zone"]["comfortTemp"]["min"] and temperature <= \
                                 self._ariston_data["zone"]["comfortTemp"]["max"]:
@@ -461,7 +464,7 @@ class AristonChecker():
         """trigger fetching of data"""
         with self._data_lock:
             if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-                #give a little rest to the system
+                # give a little rest to the system
                 self._retry_timeout = HTTP_RETRY_INTERVAL_DOWN
                 _LOGGER.warning('%s Retrying in %s seconds', self, self._retry_timeout)
             else:
@@ -491,6 +494,7 @@ class AristonChecker():
             _LOGGER.info("%s Ariston back online", self._name)
             dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
 
+
 def setup(hass, config):
     """Set up the Ariston component."""
     hass.data.setdefault(DATA_ARISTON, {DEVICES: {}, CLIMATES: [], WATER_HEATERS: []})
@@ -500,7 +504,7 @@ def setup(hass, config):
         username = device[CONF_USERNAME]
         password = device[CONF_PASSWORD]
         retries = device[CONF_MAX_RETRIES]
-        entity_id = "climate."+name
+        entity_id = "climate." + name
         try:
             api = AristonChecker(hass, device=device, name=name, username=username, password=password, retries=retries)
             api_list.append(api)
