@@ -12,9 +12,11 @@ from .const import (
     PARAM_CH_ANTIFREEZE_TEMPERATURE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
-    PARAM_DHW_SET_TEMPERATURE,
-    PARAM_MODE,
     PARAM_DETECTED_TEMPERATURE,
+    PARAM_DHW_SET_TEMPERATURE,
+    PARAM_DHW_STORAGE_TEMPERATURE,
+    PARAM_MODE,
+    PARAM_OUTSIDE_TEMPERATURE,
     VAL_UNKNOWN,
     VALUE_TO_CH_MODE,
     VALUE_TO_MODE,
@@ -35,8 +37,10 @@ SENSORS = {
     PARAM_CH_MODE: ["CH Mode", None, "mdi:hand"],
     PARAM_CH_SET_TEMPERATURE: ["CH Set Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_SET_TEMPERATURE: ["DHW Set Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_STORAGE_TEMPERATURE: ["DHW Storage Temperature", '°C', "mdi:thermometer"],
     PARAM_MODE: ["Mode", None, "mdi:water-boiler"],
     PARAM_DETECTED_TEMPERATURE: ["Detected Temperature", '°C', "mdi:thermometer"],
+    PARAM_OUTSIDE_TEMPERATURE: ["Outside Temperature", '°C', "mdi:thermometer"],
 }
 
 
@@ -111,19 +115,19 @@ class AristonSensor(Entity):
             if self._sensor_type == PARAM_DETECTED_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["zone"]["roomTemp"]
-                except  KeyError:
+                except KeyError:
                     self._state = VAL_UNKNOWN
 
             elif self._sensor_type == PARAM_CH_ANTIFREEZE_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["zone"]["antiFreezeTemp"]
-                except  KeyError:
+                except KeyError:
                     self._state = VAL_UNKNOWN
 
             elif self._sensor_type == PARAM_CH_MODE:
                 try:
                     self._state = VALUE_TO_CH_MODE[self._api._ariston_data["zone"]["mode"]["value"]]
-                except  KeyError:
+                except KeyError:
                     self._state = VAL_UNKNOWN
 
             elif self._sensor_type == PARAM_CH_SET_TEMPERATURE:
@@ -131,7 +135,7 @@ class AristonSensor(Entity):
                     self._state = self._api._ariston_data["zone"]["comfortTemp"]["value"]
                     self._attrs["Min"] = "{} °C".format(self._api._ariston_data["zone"]["comfortTemp"]["min"])
                     self._attrs["Max"] = "{} °C".format(self._api._ariston_data["zone"]["comfortTemp"]["max"])
-                except  KeyError:
+                except KeyError:
                     self._state = VAL_UNKNOWN
                     self._attrs["Min"] = "{} °C".format("")
                     self._attrs["Max"] = "{} °C".format("")
@@ -141,7 +145,7 @@ class AristonSensor(Entity):
                     self._state = self._api._ariston_data["dhwTemp"]["value"]
                     self._attrs["Min"] = "{} °C".format(self._api._ariston_data["dhwTemp"]["min"])
                     self._attrs["Max"] = "{} °C".format(self._api._ariston_data["dhwTemp"]["max"])
-                except  KeyError:
+                except KeyError:
                     self._state = VAL_UNKNOWN
                     self._attrs["Min"] = "{} °C".format("")
                     self._attrs["Max"] = "{} °C".format("")
@@ -149,7 +153,19 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_MODE:
                 try:
                     self._state = VALUE_TO_MODE[self._api._ariston_data["mode"]]
-                except  KeyError:
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_DHW_STORAGE_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_data["dhwStorageTemp"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_OUTSIDE_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_data["outsideTemp"]
+                except KeyError:
                     self._state = VAL_UNKNOWN
 
         except AristonError as error:
