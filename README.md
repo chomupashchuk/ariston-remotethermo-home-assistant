@@ -39,12 +39,15 @@ With additional attributes if needed, which are described below.
   - `ch_mode` - mode of CH (`manual` or `scheduled`).
   - `ch_set_temperature` - set CH temperature.
   - `dhw_set_temperature` - set DHW temperature.
+  - `dhw_storage_temperature` - DHW storage temperature. **valid results depend on hardware, so please share if it works as i have no such hardware**
   - `detected_temperature` - temperature measured by thermostat.
+  - `outside_temperature` - outside temperature. **valid results depend on hardware, so please share if it works as i have no such hardware**
 
 **binary_sensors**
   - `online` - online status.
   - `holiday_mode` - if holiday mode switch on via application or site.
   - `flame` - if boiler is heating water (DHW or CH).
+  - `heat_pump` - if heating pump is ON. **valid results depend on hardware, so please share if it works as i have no such hardware**
 
 
 ## Services
