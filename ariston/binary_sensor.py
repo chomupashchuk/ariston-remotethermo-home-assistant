@@ -120,6 +120,7 @@ class AristonBinarySensor(BinarySensorDevice):
                         self._state = False
                 except:
                     self._state = False
+                    pass
 
             elif self._sensor_type == PARAM_ONLINE:
                 self._state = self._api.available
@@ -129,12 +130,14 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = self._api._ariston_data["flameSensor"]
                 except:
                     self._state = False
+                    pass
 
             elif self._sensor_type == PARAM_HEAT_PUMP:
                 try:
                     self._state = self._api._ariston_data["heatingPumpOn"]
                 except:
                     self._state = False
+                    pass
 
         except AristonError as error:
             log_update_error(_LOGGER, "update", self.name, "binary sensor", error)
