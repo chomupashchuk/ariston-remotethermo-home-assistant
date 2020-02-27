@@ -95,9 +95,9 @@ class AristonWaterHeater(WaterHeaterDevice):
         try:
             dhw_temp = self._api._ariston_data["dhwStorageTemp"]
             if dhw_temp in UNKNOWN_TEMP:
-                dhw_temp = DEFAULT_TEMP
+                dhw_temp = None
         except:
-            dhw_temp = DEFAULT_TEMP
+            dhw_temp = None
             pass
         return dhw_temp
 
