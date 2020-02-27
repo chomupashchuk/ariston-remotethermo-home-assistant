@@ -1,14 +1,14 @@
 """Suppoort for Ariston."""
 import copy
-import dateutil.parser
-import homeassistant.helpers.config_validation as cv
 import json
 import logging
-import requests
 import threading
 import time
-import voluptuous as vol
 from datetime import timedelta
+
+import homeassistant.helpers.config_validation as cv
+import requests
+import voluptuous as vol
 from homeassistant.components.binary_sensor import DOMAIN as BINARY_SENSOR
 from homeassistant.components.climate import DOMAIN as CLIMATE
 from homeassistant.components.sensor import DOMAIN as SENSOR
@@ -23,7 +23,6 @@ from homeassistant.const import (
     CONF_SWITCHES,
     CONF_USERNAME,
 )
-from homeassistant.exceptions import Unauthorized, UnknownUser
 from homeassistant.helpers import discovery
 from homeassistant.helpers.dispatcher import dispatcher_send
 from homeassistant.helpers.event import track_point_in_time
@@ -38,6 +37,7 @@ from .const import (
     CONF_MAX_RETRIES,
     DATA_ARISTON,
     DEVICES,
+    DHW_MODE_TO_VALUE,
     DOMAIN,
     MODE_TO_VALUE,
     SERVICE_SET_DATA,
@@ -45,6 +45,7 @@ from .const import (
     PARAM_MODE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
+    PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     VAL_MODE_WINTER,
     VAL_MODE_SUMMER,
@@ -76,6 +77,7 @@ HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN * 2
 HTTP_TIMEOUT_LOGIN = 3
 HTTP_TIMEOUT_GET = 15
 HTTP_TIMEOUT_SET = 15
+HTTP_ADDITIONAL_GET = 3
 MAX_ERRORS = 4
 MAX_ERRORS_TIMER_EXTEND = 2
 TIMER_SET_LOCK = 25
@@ -187,9 +189,9 @@ class AristonChecker():
         if self._login and self._plant_id != "":
             if time.time() - self._set_time_start > TIMER_SET_LOCK:
                 # give time to read new data
-                url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                 with self._data_lock:
                     try:
+                        url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                         self._get_time_start = time.time()
                         resp = self._session.get(
                             url,
@@ -220,12 +222,83 @@ class AristonChecker():
                         raise CommError(error)
                     _LOGGER.info("%s Query worked. Exit code: <%s>", self, resp.status_code)
                     try:
+
+                        allowed_modes = []
+                        if "allowedModes" in self._ariston_data:
+                            allowed_modes = self._ariston_data["allowedModes"]
+                        allowed_ch_modes = []
+                        if "zone" in self._ariston_data:
+                            if "mode" in self._ariston_data["zone"]:
+                                if "allowedOptions" in self._ariston_data["zone"]["mode"]:
+                                    allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
+
                         self._ariston_data = copy.deepcopy(resp.json())
-                        """
-                        #uncomment below to log received data for troubleshooting purposes
-                        with open('/config/tmp/data.json', 'w') as ariston_fetched:
+
+                        if allowed_modes != []:
+                            self._ariston_data["allowedModes"] = allowed_modes
+                        if allowed_ch_modes != []:
+                            self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
+
+                        # uncomment below to log received data for troubleshooting purposes
+                        with open('/config/data_' + self._name + '_main.json', 'w') as ariston_fetched:
                             json.dump(self._ariston_data, ariston_fetched)
-                        """
+
+                        try:
+                            url = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
+                            resp = self._session.get(
+                                url,
+                                auth=self._token,
+                                timeout=HTTP_ADDITIONAL_GET,
+                                verify=self._verify)
+                            resp.raise_for_status()
+                            if resp.status_code == 200:
+                                with open('/config/data_' + self._name + '_gas.json', 'w') as ariston_fetched:
+                                    json.dump(resp.json(), ariston_fetched)
+                        except:
+                            pass
+
+                        try:
+                            url = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=U6_16_0,U6_16_5,U6_16_6,U6_16_7,U6_9_2&umsys=si'
+                            resp = self._session.get(
+                                url,
+                                auth=self._token,
+                                timeout=HTTP_ADDITIONAL_GET,
+                                verify=self._verify)
+                            resp.raise_for_status()
+                            if resp.status_code == 200:
+                                with open('/config/data_' + self._name + '_params.json', 'w') as ariston_fetched:
+                                    json.dump(resp.json(), ariston_fetched)
+                        except:
+                            pass
+
+                        try:
+                            url = self._url + '/Error/ActiveDataSource/' + self._plant_id + '?$inlinecount=allpages&$skip=0&$top=100'
+                            resp = self._session.get(
+                                url,
+                                auth=self._token,
+                                timeout=HTTP_ADDITIONAL_GET,
+                                verify=self._verify)
+                            resp.raise_for_status()
+                            if resp.status_code == 200:
+                                with open('/config/data_' + self._name + '_errors.json', 'w') as ariston_fetched:
+                                    json.dump(resp.json(), ariston_fetched)
+                        except:
+                            pass
+
+                        try:
+                            url = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
+                            resp = self._session.get(
+                                url,
+                                auth=self._token,
+                                timeout=HTTP_ADDITIONAL_GET,
+                                verify=self._verify)
+                            resp.raise_for_status()
+                            if resp.status_code == 200:
+                                with open('/config/data_' + self._name + '_ch_weekly.json', 'w') as ariston_fetched:
+                                    json.dump(resp.json(), ariston_fetched)
+                        except:
+                            pass
+
                     except:
                         with self._plant_id_lock:
                             self._login = False
@@ -289,6 +362,7 @@ class AristonChecker():
                 # Format is received in 12H format but for some reason REST tools send it fine but python must send 24H format
                 set_data["NewValue"]["zone"]["derogaUntil"] = self._set_deroga_time()
                 set_data["OldValue"]["zone"]["derogaUntil"] = self._set_deroga_time()
+
                 if PARAM_MODE in self._set_param:
                     if set_data["NewValue"]["mode"] == self._set_param[PARAM_MODE]:
                         if self._set_time_start < self._get_time_end:
@@ -300,17 +374,31 @@ class AristonChecker():
                     else:
                         set_data["NewValue"]["mode"] = self._set_param[PARAM_MODE]
                         data_changed = True
+
                 if PARAM_DHW_SET_TEMPERATURE in self._set_param:
-                    if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
-                        if self._set_time_start < self._get_time_end:
-                            # value should be up to date and match to remove from setting
-                            del self._set_param[PARAM_DHW_SET_TEMPERATURE]
+                    if set_data["NewValue"]["dhwTimeProgSupported"] == True and set_data["NewValue"]["dhwTimeProgComfortActive"] == True:
+                        if set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
+                            if self._set_time_start < self._get_time_end:
+                                # value should be up to date and match to remove from setting
+                                del self._set_param[PARAM_DHW_SET_TEMPERATURE]
+                            else:
+                                # assume data was not yet changed
+                                data_changed = True
                         else:
-                            # assume data was not yet changed
+                            set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
                             data_changed = True
                     else:
-                        set_data["NewValue"]["dhwTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
-                        data_changed = True
+                        if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
+                            if self._set_time_start < self._get_time_end:
+                                # value should be up to date and match to remove from setting
+                                del self._set_param[PARAM_DHW_SET_TEMPERATURE]
+                            else:
+                                # assume data was not yet changed
+                                data_changed = True
+                        else:
+                            set_data["NewValue"]["dhwTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
+                            data_changed = True
+
                 if PARAM_CH_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["zone"]["comfortTemp"]["value"] == self._set_param[
                         PARAM_CH_SET_TEMPERATURE]:
@@ -323,6 +411,7 @@ class AristonChecker():
                     else:
                         set_data["NewValue"]["zone"]["comfortTemp"]["value"] = self._set_param[PARAM_CH_SET_TEMPERATURE]
                         data_changed = True
+
                 if PARAM_CH_MODE in self._set_param:
                     if set_data["NewValue"]["zone"]["mode"]["value"] == self._set_param[PARAM_CH_MODE]:
                         if self._set_time_start < self._get_time_end:
@@ -334,6 +423,19 @@ class AristonChecker():
                     else:
                         set_data["NewValue"]["zone"]["mode"]["value"] = self._set_param[PARAM_CH_MODE]
                         data_changed = True
+
+                if PARAM_DHW_MODE in self._set_param:
+                    if set_data["NewValue"]["dhwMode"] == self._set_param[PARAM_DHW_MODE]:
+                        if self._set_time_start < self._get_time_end:
+                            # value should be up to date and match to remove from setting
+                            del self._set_param[PARAM_DHW_MODE]
+                        else:
+                            # assume data was not yet changed
+                            data_changed = True
+                    else:
+                        set_data["NewValue"]["dhwMode"] = self._set_param[PARAM_DHW_MODE]
+                        data_changed = True
+
                 if data_changed == True:
                     if not self._set_scheduled:
                         if self._set_retry < self._set_max_retries:
@@ -352,6 +454,8 @@ class AristonChecker():
                                 del self._set_param[PARAM_CH_SET_TEMPERATURE]
                             if PARAM_CH_MODE in self._set_param:
                                 del self._set_param[PARAM_CH_MODE]
+                            if PARAM_DHW_MODE in self._set_param:
+                                del self._set_param[PARAM_DHW_MODE]
                     try:
                         self._set_time_start = time.time()
                         resp = self._session.post(
@@ -376,8 +480,29 @@ class AristonChecker():
                     except CommError:
                         _LOGGER.warning('%s Request communication error', self)
                         raise
+
+                    allowed_modes = []
+                    if "allowedModes" in self._ariston_data:
+                        allowed_modes = self._ariston_data["allowedModes"]
+                    allowed_ch_modes = []
+                    if "zone" in self._ariston_data:
+                        if "mode" in self._ariston_data["zone"]:
+                            if "allowedOptions" in self._ariston_data["zone"]["mode"]:
+                                allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
                     # store data in reply, but note that in some cases in fact it is not set
                     self._ariston_data = copy.deepcopy(resp.json())
+
+                    if allowed_modes != []:
+                        self._ariston_data["allowedModes"] = allowed_modes
+                    if allowed_ch_modes != []:
+                        self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
+
+                    """
+                    # uncomment below to log received data for troubleshooting purposes
+                    with open('/config/data_' + self._name + '_set_reply.json', 'w') as ariston_fetched:
+                        json.dump(self._ariston_data, ariston_fetched)
+                    """
+
                     _LOGGER.info('%s Data was changed', self)
                 else:
                     _LOGGER.debug('%s Same data was used', self)
@@ -400,6 +525,8 @@ class AristonChecker():
                             del self._set_param[PARAM_CH_SET_TEMPERATURE]
                         if PARAM_CH_MODE in self._set_param:
                             del self._set_param[PARAM_CH_MODE]
+                        if PARAM_DHW_MODE in self._set_param:
+                            del self._set_param[PARAM_DHW_MODE]
                 _LOGGER.warning("%s No stable connection to set the data", self)
                 raise CommError
 
@@ -408,14 +535,21 @@ class AristonChecker():
         if self._ariston_data != {}:
             url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
             with self._data_lock:
+
                 # check mode and set it
                 if PARAM_MODE in parameter_list:
                     wanted_mode = str(parameter_list[PARAM_MODE]).lower()
-                    if wanted_mode in MODE_TO_VALUE:
-                        self._set_param[PARAM_MODE] = MODE_TO_VALUE[wanted_mode]
-                        _LOGGER.info('%s New mode %s', self, wanted_mode)
-                    else:
-                        _LOGGER.warning('%s Unknown mode: %s', self, wanted_mode)
+                    try:
+                        if wanted_mode in MODE_TO_VALUE and MODE_TO_VALUE[wanted_mode] in self._ariston_data[
+                            "allowedModes"]:
+                            self._set_param[PARAM_MODE] = MODE_TO_VALUE[wanted_mode]
+                            _LOGGER.info('%s New mode %s', self, wanted_mode)
+                        else:
+                            _LOGGER.warning('%s Unknown or unsupported mode: %s', self, wanted_mode)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported mode or key error: %s', self, wanted_mode)
+                        pass
+
                 # check dhw temperature
                 if PARAM_DHW_SET_TEMPERATURE in parameter_list:
                     wanted_dhw_temperature = str(parameter_list[PARAM_DHW_SET_TEMPERATURE]).lower()
@@ -431,6 +565,7 @@ class AristonChecker():
                     except:
                         _LOGGER.warning('%s Not supported DHW temperature value: %s', self, wanted_dhw_temperature)
                         pass
+
                 # check CH temperature
                 if PARAM_CH_SET_TEMPERATURE in parameter_list:
                     wanted_ch_temperature = str(parameter_list[PARAM_CH_SET_TEMPERATURE]).lower()
@@ -446,16 +581,39 @@ class AristonChecker():
                     except:
                         _LOGGER.warning('%s Not supported CH temperature value: %s', self, wanted_ch_temperature)
                         pass
+
                 # check CH mode
                 if PARAM_CH_MODE in parameter_list:
                     wanted_ch_mode = str(parameter_list[PARAM_CH_MODE]).lower()
-                    if wanted_ch_mode in CH_MODE_TO_VALUE:
-                        self._set_param[PARAM_CH_MODE] = CH_MODE_TO_VALUE[wanted_ch_mode]
-                        _LOGGER.info('%s New CH mode %s', self, wanted_ch_mode)
-                    else:
-                        _LOGGER.warning('%s Unknown mode: %s', self, wanted_ch_mode)
+                    try:
+                        if wanted_ch_mode in CH_MODE_TO_VALUE and CH_MODE_TO_VALUE[wanted_ch_mode] in \
+                                self._ariston_data["zone"]["mode"]["allowedOptions"]:
+                            self._set_param[PARAM_CH_MODE] = CH_MODE_TO_VALUE[wanted_ch_mode]
+                            _LOGGER.info('%s New CH mode %s', self, wanted_ch_mode)
+                        else:
+                            _LOGGER.warning('%s Unknown or unsupported CH mode: %s', self, wanted_ch_mode)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported CH mode or key error: %s', self, wanted_ch_mode)
+                        pass
+
+                # check DHW mode
+                if PARAM_DHW_MODE in parameter_list:
+                    wanted_dhw_mode = str(parameter_list[PARAM_DHW_MODE]).lower()
+                    try:
+                        if wanted_dhw_mode in DHW_MODE_TO_VALUE and self._ariston_data[
+                            "dhwModeNotChangeable"] == False:
+                            self._set_param[PARAM_DHW_MODE] = DHW_MODE_TO_VALUE[wanted_dhw_mode]
+                            _LOGGER.info('%s New DHW mode %s', self, wanted_dhw_mode)
+                        else:
+                            _LOGGER.warning('%s Unknown or unsupported DHW mode: %s', self, wanted_dhw_mode)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported DHW mode or key error: %s', self, wanted_dhw_mode)
+                        pass
+
                 self._set_new_data = True
+
             self._actual_set_http_data()
+
         else:
             _LOGGER.warning("%s No valid data fetched from server to set changes", self)
             raise CommError
@@ -575,18 +733,27 @@ def setup(hass, config):
                 try:
                     with api._data_lock:
                         parameter_list = {}
+
                         data = call.data.get(PARAM_MODE, "")
                         if data != "":
                             parameter_list[PARAM_MODE] = data
+
                         data = call.data.get(PARAM_CH_MODE, "")
                         if data != "":
                             parameter_list[PARAM_CH_MODE] = data
+
                         data = call.data.get(PARAM_CH_SET_TEMPERATURE, "")
                         if data != "":
                             parameter_list[PARAM_CH_SET_TEMPERATURE] = data
+
                         data = call.data.get(PARAM_DHW_SET_TEMPERATURE, "")
                         if data != "":
                             parameter_list[PARAM_DHW_SET_TEMPERATURE] = data
+
+                        data = call.data.get(PARAM_DHW_MODE, "")
+                        if data != "":
+                            parameter_list[PARAM_DHW_MODE] = data
+
                     _LOGGER.debug("device found")
                     api._set_http_data(parameter_list)
                 except CommError:

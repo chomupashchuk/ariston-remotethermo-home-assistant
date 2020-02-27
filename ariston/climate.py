@@ -3,6 +3,7 @@ Adds support for the Ariston Boiler
 """
 import logging
 from datetime import timedelta
+
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     CURRENT_HVAC_HEAT,
@@ -29,6 +30,7 @@ from .const import (
     PARAM_CH_SET_TEMPERATURE,
     VAL_MODE_WINTER,
     VAL_MODE_SUMMER,
+    VAL_MODE_HEATING_ONLY,
     VAL_MODE_OFF,
     VAL_CH_MODE_MANUAL,
     VAL_CH_MODE_SCHEDULED,
@@ -43,7 +45,7 @@ DEFAULT_MAX = 30.0
 DEFAULT_TEMP = 0.0
 
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-STATE_SCAN_INTERVAL_SECS = 3
+STATE_SCAN_INTERVAL_SECS = 5
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -51,7 +53,7 @@ SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
 
 SUPPORT_FLAGS = SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE
 SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_AUTO]
-SUPPORTED_PRESETS = [VAL_MODE_SUMMER, VAL_MODE_WINTER, VAL_MODE_OFF]
+SUPPORTED_PRESETS = [VAL_MODE_SUMMER, VAL_MODE_WINTER, VAL_MODE_OFF, VAL_MODE_HEATING_ONLY]
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -164,8 +166,10 @@ class AristonThermostat(ClimateDevice):
         """Return the current running hvac operation."""
         try:
             climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
-            if climate_mode != VAL_MODE_OFF:
-                if self._api._ariston_data["flameSensor"] == True:
+            if climate_mode != VAL_MODE_OFF and climate_mode != VAL_MODE_SUMMER:
+                if self._api._ariston_data["zone"]["heatRequest"] == True:
+                    curr_hvac_action = CURRENT_HVAC_HEAT
+                elif self._api._ariston_data["flameSensor"] == True and self._api._ariston_data["flameForDhw"] != True:
                     curr_hvac_action = CURRENT_HVAC_HEAT
                 else:
                     curr_hvac_action = CURRENT_HVAC_IDLE
@@ -195,7 +199,16 @@ class AristonThermostat(ClimateDevice):
     @property
     def preset_modes(self):
         """Return a list of available preset modes."""
-        return SUPPORTED_PRESETS
+        all_presets = []
+        try:
+            for item in self._api._ariston_data["allowedModes"]:
+                try:
+                    all_presets.append(VALUE_TO_MODE[item])
+                except:
+                    pass
+        except:
+            pass
+        return all_presets
 
     @property
     def supported_features(self):

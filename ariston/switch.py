@@ -1,6 +1,6 @@
 """Suppoort for Ariston switch."""
-import logging
 from datetime import timedelta
+
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.const import CONF_SWITCHES, CONF_NAME
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -10,14 +10,13 @@ from .const import (
     DATA_ARISTON,
     DEVICES,
     PARAM_MODE,
-    PARAM_CH_MODE,
     SERVICE_UPDATE,
     VAL_MODE_SUMMER,
     VAL_MODE_OFF,
     VAL_MODE_WINTER,
     VALUE_TO_MODE,
 )
-from .helpers import log_update_error, service_signal
+from .helpers import service_signal
 
 STATE_SCAN_INTERVAL_SECS = 3
 

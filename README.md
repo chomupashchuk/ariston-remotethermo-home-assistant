@@ -38,10 +38,14 @@ With additional attributes if needed, which are described below.
   - `ch_antifreeze_temperature` - CH antifreeze temperature.
   - `ch_mode` - mode of CH (`manual` or `scheduled`).
   - `ch_set_temperature` - set CH temperature.
+  - `dhw_mode` - mode of DHW. Not supported on all models.
   - `dhw_set_temperature` - set DHW temperature.
-  - `dhw_storage_temperature` - DHW storage temperature. **valid results depend on hardware, so please share if it works as i have no such hardware**
+  - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
+  - `dhw_scheduled_comfort_temperature` - DHW storage comfort temperature for scheduled mode. Not supported on all models.
+  - `dhw_scheduled_economy_temperature` - DHW storage economy temperature for scheduled mode. Not supported on all models.
   - `detected_temperature` - temperature measured by thermostat.
-  - `outside_temperature` - outside temperature. **valid results depend on hardware, so please share if it works as i have no such hardware**
+  - `outside_temperature` - outside temperature. Not supported on all models.
+
 
 **binary_sensors**
   - `online` - online status.

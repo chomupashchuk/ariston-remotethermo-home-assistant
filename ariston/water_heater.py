@@ -1,6 +1,7 @@
 """Support for Ariston water heaters."""
 import logging
 from datetime import timedelta
+
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE,
@@ -13,16 +14,25 @@ from homeassistant.const import (
 )
 
 from .const import (
-    CONF_POWER_ON,
     DATA_ARISTON,
     DEVICES,
+    MODE_TO_VALUE,
+    PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_MODE,
     VAL_MODE_OFF,
     VAL_MODE_SUMMER,
     VAL_MODE_WINTER,
+    VAL_MODE_SUMMER_MANUAL,
+    VAL_MODE_SUMMER_SCHEDULED,
+    VAL_MODE_WINTER_MANUAL,
+    VAL_MODE_WINTER_SCHEDULED,
+    VAL_MODE_HEATING_ONLY,
     VAL_OFFLINE,
+    VAL_CH_MODE_MANUAL,
+    VAL_CH_MODE_SCHEDULED,
     VALUE_TO_MODE,
+    VALUE_TO_DHW_MODE,
     UNKNOWN_TEMP,
 )
 
@@ -30,10 +40,21 @@ from .const import (
 DEFAULT_MIN = 36.0
 DEFAULT_MAX = 60.0
 DEFAULT_TEMP = 0.0
-STATE_SCAN_INTERVAL_SECS = 3
+STATE_SCAN_INTERVAL_SECS = 5
 
 SUPPORT_FLAGS_HEATER = (SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE)
-SUPPORTED_OPERATIONS = [VAL_MODE_OFF, VAL_MODE_SUMMER, VAL_MODE_WINTER]
+SUPPORTED_OPERATIONS_1 = [
+    VAL_MODE_OFF,
+    VAL_MODE_SUMMER,
+    VAL_MODE_WINTER,
+    VAL_MODE_HEATING_ONLY,
+]
+SUPPORTED_OPERATIONS_2 = [
+    VAL_MODE_SUMMER_MANUAL,
+    VAL_MODE_SUMMER_SCHEDULED,
+    VAL_MODE_WINTER_MANUAL,
+    VAL_MODE_WINTER_SCHEDULED
+]
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -144,13 +165,45 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def operation_list(self):
         """List of available operation modes."""
-        return [VAL_MODE_OFF, VAL_MODE_SUMMER, VAL_MODE_WINTER]
+        op_list = [VAL_MODE_OFF]
+        try:
+            if self._api._ariston_data["dhwModeNotChangeable"] == False:
+                op_list.append(VAL_MODE_SUMMER_MANUAL)
+                op_list.append(VAL_MODE_SUMMER_SCHEDULED)
+                op_list.append(VAL_MODE_WINTER_MANUAL)
+                op_list.append(VAL_MODE_WINTER_SCHEDULED)
+            else:
+                op_list.append(VAL_MODE_SUMMER)
+                op_list.append(VAL_MODE_WINTER)
+            if MODE_TO_VALUE[VAL_MODE_HEATING_ONLY] in self._api._ariston_data["allowedModes"]:
+                op_list.append(VAL_MODE_HEATING_ONLY)
+        except:
+            pass
+        return op_list
 
     @property
     def current_operation(self):
         """Return current operation"""
         try:
-            current_op = VALUE_TO_MODE[self._api._ariston_data["mode"]]
+            current_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
+            current_dhw_mode = VALUE_TO_DHW_MODE[self._api._ariston_data["dhwMode"]]
+            if self._api._ariston_data["dhwModeNotChangeable"] == False:
+                if current_mode == VAL_MODE_SUMMER:
+                    if current_dhw_mode == VAL_CH_MODE_MANUAL:
+                        current_op = VAL_MODE_SUMMER_MANUAL
+                    else:
+                        current_op = VAL_MODE_SUMMER_SCHEDULED
+                elif current_mode == VAL_MODE_WINTER:
+                    if current_dhw_mode == VAL_CH_MODE_MANUAL:
+                        current_op = VAL_MODE_WINTER_MANUAL
+                    else:
+                        current_op = VAL_MODE_WINTER_SCHEDULED
+                elif current_mode == VAL_MODE_HEATING_ONLY:
+                    current_op = VAL_MODE_HEATING_ONLY
+                else:
+                    current_op = VAL_MODE_OFF
+            else:
+                current_op = current_mode
         except:
             current_op = VAL_OFFLINE
             pass
@@ -164,8 +217,17 @@ class AristonWaterHeater(WaterHeaterDevice):
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""
-        if operation_mode in SUPPORTED_OPERATIONS:
+        if operation_mode in SUPPORTED_OPERATIONS_1:
             self._api._set_http_data({PARAM_MODE: operation_mode})
+        elif operation_mode in SUPPORTED_OPERATIONS_2:
+            if operation_mode == VAL_MODE_SUMMER_MANUAL:
+                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
+            elif operation_mode == VAL_MODE_SUMMER_SCHEDULED:
+                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
+            elif operation_mode == VAL_MODE_SUMMER_MANUAL:
+                self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
+            elif operation_mode == VAL_MODE_SUMMER_MANUAL:
+                self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
 
     def update(self):
         """Update all Node data from Hive."""

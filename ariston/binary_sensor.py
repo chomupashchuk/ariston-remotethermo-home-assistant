@@ -1,6 +1,7 @@
 """Suppoort for Ariston binary sensors."""
 import logging
 from datetime import timedelta
+
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_HEAT,
@@ -22,7 +23,7 @@ from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
 """BINARY_SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-BINARY_SENSOR_SCAN_INTERVAL_SECS = 3
+BINARY_SENSOR_SCAN_INTERVAL_SECS = 5
 
 SCAN_INTERVAL = timedelta(seconds=BINARY_SENSOR_SCAN_INTERVAL_SECS)
 

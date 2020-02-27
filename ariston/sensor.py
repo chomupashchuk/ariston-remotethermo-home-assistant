@@ -1,6 +1,7 @@
 """Suppoort for Ariston sensors."""
 import logging
 from datetime import timedelta
+
 from homeassistant.const import CONF_NAME, CONF_SENSORS
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import Entity
@@ -13,12 +14,17 @@ from .const import (
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
     PARAM_DETECTED_TEMPERATURE,
+    PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_STORAGE_TEMPERATURE,
+    PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE,
+    PARAM_DHW_SCHEDULED_ECONOMY_TEMPERATURE,
     PARAM_MODE,
     PARAM_OUTSIDE_TEMPERATURE,
     VAL_UNKNOWN,
+    VAL_UNSUPPORTED,
     VALUE_TO_CH_MODE,
+    VALUE_TO_DHW_MODE,
     VALUE_TO_MODE,
     UNKNOWN_TEMP,
 )
@@ -26,7 +32,7 @@ from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-SENSOR_SCAN_INTERVAL_SECS = 3
+SENSOR_SCAN_INTERVAL_SECS = 5
 
 SCAN_INTERVAL = timedelta(seconds=SENSOR_SCAN_INTERVAL_SECS)
 
@@ -42,6 +48,9 @@ SENSORS = {
     PARAM_MODE: ["Mode", None, "mdi:water-boiler"],
     PARAM_DETECTED_TEMPERATURE: ["Detected Temperature", '°C', "mdi:thermometer"],
     PARAM_OUTSIDE_TEMPERATURE: ["Outside Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE: ["DHW Schedule Comfort Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_SCHEDULED_ECONOMY_TEMPERATURE: ["DHW Schedule Economy Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_MODE: ["DHW Mode", None, "mdi:hand"],
 }
 
 
@@ -160,8 +169,8 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_DHW_STORAGE_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["dhwStorageTemp"]
-                    if self._state in UNKNOWN_TEMP:
-                        self._state = VAL_UNKNOWN
+                    if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwBoilerPresent"] != True:
+                        self._state = VAL_UNSUPPORTED
                 except KeyError:
                     self._state = VAL_UNKNOWN
 
@@ -169,7 +178,29 @@ class AristonSensor(Entity):
                 try:
                     self._state = self._api._ariston_data["outsideTemp"]
                     if self._state in UNKNOWN_TEMP:
-                        self._state = VAL_UNKNOWN
+                        self._state = VAL_UNSUPPORTED
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_data["dhwTimeProgComfortTemp"]["value"]
+                    if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:
+                        self._state = VAL_UNSUPPORTED
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_DHW_SCHEDULED_ECONOMY_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_data["dhwTimeProgEconomyTemp"]["value"]
+                    if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:
+                        self._state = VAL_UNSUPPORTED
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_DHW_MODE:
+                try:
+                    self._state = VALUE_TO_DHW_MODE[self._api._ariston_data["dhwMode"]]
                 except KeyError:
                     self._state = VAL_UNKNOWN
 
