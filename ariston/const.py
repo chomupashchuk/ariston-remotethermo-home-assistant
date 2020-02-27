@@ -20,6 +20,8 @@ PARAM_MODE = "mode"
 PARAM_ONLINE = "online"
 PARAM_OUTSIDE_TEMPERATURE = "outside_temperature"
 
+UNKNOWN_TEMP = [0, 3276]
+
 VAL_MODE_WINTER = "winter"
 VAL_MODE_SUMMER = "summer"
 VAL_MODE_OFF = "off"

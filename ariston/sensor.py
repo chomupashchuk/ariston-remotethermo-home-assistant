@@ -20,6 +20,7 @@ from .const import (
     VAL_UNKNOWN,
     VALUE_TO_CH_MODE,
     VALUE_TO_MODE,
+    UNKNOWN_TEMP,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -159,12 +160,16 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_DHW_STORAGE_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["dhwStorageTemp"]
+                    if self._state in UNKNOWN_TEMP:
+                        self._state = VAL_UNKNOWN
                 except KeyError:
                     self._state = VAL_UNKNOWN
 
             elif self._sensor_type == PARAM_OUTSIDE_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["outsideTemp"]
+                    if self._state in UNKNOWN_TEMP:
+                        self._state = VAL_UNKNOWN
                 except KeyError:
                     self._state = VAL_UNKNOWN
 

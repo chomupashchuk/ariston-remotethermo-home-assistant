@@ -99,6 +99,7 @@ class AristonThermostat(ClimateDevice):
             minimum_temp = self._api._ariston_data["zone"]["comfortTemp"]["min"]
         except:
             minimum_temp = DEFAULT_MIN
+            pass
         return minimum_temp
 
     @property
@@ -108,6 +109,7 @@ class AristonThermostat(ClimateDevice):
             maximum_temp = self._api._ariston_data["zone"]["comfortTemp"]["max"]
         except:
             maximum_temp = DEFAULT_MAX
+            pass
         return maximum_temp
 
     @property
@@ -122,6 +124,7 @@ class AristonThermostat(ClimateDevice):
             current_temp = self._api._ariston_data["zone"]["roomTemp"]
         except:
             current_temp = DEFAULT_TEMP
+            pass
         return current_temp
 
     @property
@@ -131,6 +134,7 @@ class AristonThermostat(ClimateDevice):
             target_temp = self._api._ariston_data["zone"]["comfortTemp"]["value"]
         except:
             target_temp = DEFAULT_TEMP
+            pass
         return target_temp
 
     @property
@@ -147,6 +151,7 @@ class AristonThermostat(ClimateDevice):
                     curr_hvac_mode = HVAC_MODE_AUTO
         except:
             curr_hvac_mode = HVAC_MODE_OFF
+            pass
         return curr_hvac_mode
 
     @property
@@ -168,6 +173,7 @@ class AristonThermostat(ClimateDevice):
                 curr_hvac_action = CURRENT_HVAC_OFF
         except:
             curr_hvac_action = CURRENT_HVAC_OFF
+            pass
         return curr_hvac_action
 
     @property
@@ -183,6 +189,7 @@ class AristonThermostat(ClimateDevice):
                 curr_preset_mode = VAL_OFFLINE
         except:
             curr_preset_mode = VAL_OFFLINE
+            pass
         return curr_preset_mode
 
     @property

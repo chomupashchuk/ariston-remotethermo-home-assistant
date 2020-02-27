@@ -23,6 +23,7 @@ from .const import (
     VAL_MODE_WINTER,
     VAL_OFFLINE,
     VALUE_TO_MODE,
+    UNKNOWN_TEMP,
 )
 
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
@@ -89,6 +90,18 @@ class AristonWaterHeater(WaterHeaterDevice):
         return SUPPORT_FLAGS_HEATER
 
     @property
+    def current_temperature(self):
+        """Return the temperature"""
+        try:
+            dhw_temp = self._api._ariston_data["dhwStorageTemp"]
+            if dhw_temp in UNKNOWN_TEMP:
+                dhw_temp = DEFAULT_TEMP
+        except:
+            dhw_temp = DEFAULT_TEMP
+            pass
+        return dhw_temp
+
+    @property
     def temperature_unit(self):
         """Return the unit of measurement."""
         return TEMP_CELSIUS
@@ -100,6 +113,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             minimum_temp = self._api._ariston_data["dhwTemp"]["min"]
         except:
             minimum_temp = DEFAULT_MIN
+            pass
         return minimum_temp
 
     @property
@@ -109,6 +123,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             maximum_temp = self._api._ariston_data["dhwTemp"]["max"]
         except:
             maximum_temp = DEFAULT_MAX
+            pass
         return maximum_temp
 
     @property
@@ -118,6 +133,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             target_temp = self._api._ariston_data["dhwTemp"]["value"]
         except:
             target_temp = DEFAULT_TEMP
+            pass
         return target_temp
 
     @property
@@ -137,6 +153,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             current_op = VALUE_TO_MODE[self._api._ariston_data["mode"]]
         except:
             current_op = VAL_OFFLINE
+            pass
         return current_op
 
     def set_temperature(self, **kwargs):
