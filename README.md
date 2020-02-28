@@ -20,7 +20,7 @@ With additional attributes if needed, which are described below.
 **username** - **mandatory** user name used in https://www.ariston-net.remotethermo.com
 
 **password** - **mandatory** password used in https://www.ariston-net.remotethermo.com
-*It is recommended for security purposes to not use your common password just in case.*
+**! It is recommended for security purposes to not use your common password, just in case !**
 
 **name** - friendly name for integration
 
@@ -30,29 +30,88 @@ With additional attributes if needed, which are described below.
 
 **max_retries** - number of retries to set the data in boiler. Retries are made in case of communication issues for example, which take place occasionally. By default the value is '1'.
 
+**store_config_files** - `true` or `false` indicating if configuration `json` files to be stored in `/config` folder.
+
 **switches** - lists switches to be defined
   - `power` - turn power off and on (on value is defined by **power_on**).
 
 **sensors** - lists sensors to be defined
-  - `mode` - mode of boiler (`off` or `summer` or `winter`).
+  - `ch_account_gas` - gas use summary for CH. Not supported on all models.
   - `ch_antifreeze_temperature` - CH antifreeze temperature.
-  - `ch_mode` - mode of CH (`manual` or `scheduled`).
+  - `ch_detected_temperature` - temperature measured by thermostat.
+  - `ch_mode` - mode of CH (`manual` or `scheduled` and others).
+  - `ch_scheduled_comfort_temperature` - CH comfort temperature for scheduled mode. Not supported on all models.
+  - `ch_scheduled_economy_temperature` - CH economy temperature for scheduled mode. Not supported on all models.
   - `ch_set_temperature` - set CH temperature.
+  - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
   - `dhw_mode` - mode of DHW. Not supported on all models.
-  - `dhw_set_temperature` - set DHW temperature.
-  - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
   - `dhw_scheduled_comfort_temperature` - DHW storage comfort temperature for scheduled mode. Not supported on all models.
   - `dhw_scheduled_economy_temperature` - DHW storage economy temperature for scheduled mode. Not supported on all models.
-  - `detected_temperature` - temperature measured by thermostat.
+  - `dhw_set_temperature` - set DHW temperature.
+  - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
+  - `errors` - active errors (no errors to test on)
+  - `heating_last_24h` - gas use in last 24 hours. Not supported on all models.
+  - `heating_last_30d` - gas use in last 7 days. Not supported on all models.
+  - `heating_last_365d` - gas use in last 30 days. Not supported on all models.
+  - `heating_last_7d` - gas use in last 365 days. Not supported on all models.
+  - `mode` - mode of boiler (`off` or `summer` or `winter` and others).
   - `outside_temperature` - outside temperature. Not supported on all models.
-
+  - `water_last_24h` - water use in last 24 hours. Not supported on all models.
+  - `water_last_30d` - water use in last 7 days. Not supported on all models.
+  - `water_last_365d` - water use in last 30 days. Not supported on all models.
+  - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 **binary_sensors**
-  - `online` - online status.
-  - `holiday_mode` - if holiday mode switch on via application or site.
+  - `dhw_flame` - if water being heated (DHW).
   - `flame` - if boiler is heating water (DHW or CH).
-  - `heat_pump` - if heating pump is ON. **valid results depend on hardware, so please share if it works as i have no such hardware**
+  - `heat_pump` - if heating pump is ON. Not supported on all models.
+  - `holiday_mode` - if holiday mode switch on via application or site.
+  - `online` - online status.
 
+
+## Example of configuration.yaml entry
+```
+ariston:
+  username: !secret ariston_user
+  password: !secret ariston_password
+  hvac_off: "summer"
+  power_on: "summer"
+  store_config_files: true
+  max_retries: 5
+  switches:
+    - power
+  sensors:
+    - ch_account_gas
+    - ch_antifreeze_temperature
+    - ch_detected_temperature
+    - ch_mode
+    - ch_scheduled_comfort_temperature
+    - ch_scheduled_economy_temperature
+    - ch_set_temperature
+    - dhw_account_gas
+    - dhw_mode
+    - dhw_scheduled_comfort_temperature
+    - dhw_scheduled_economy_temperature
+    - dhw_set_temperature
+    - dhw_storage_temperature
+    - errors
+    - heating_last_24h
+    - heating_last_30d
+    - heating_last_365d
+    - heating_last_7d
+    - mode
+    - outside_temperature
+    - water_last_24h
+    - water_last_30d
+    - water_last_365d
+    - water_last_7d
+  binary_sensors:
+    - dhw_flame
+    - flame
+    - holiday_mode
+    - heat_pump
+    - online
+```
 
 ## Services
 `ariston.set_data` - sets data in the boiler. Uses **max_retries** attribute from configuration.
@@ -60,10 +119,22 @@ With additional attributes if needed, which are described below.
 ### Service attributes:
 `entity_id` - **mandatory** entity of Ariston `climate`.
 
-`mode` - mode of the boiler: `off`, `summer`, `winter`.
+`mode` - mode of the boiler: `off`, `summer`, `winter` etc.
 
-`ch_mode` - mode of CH: `manual`, `scheduled`.
+`ch_mode` - mode of CH: `manual`, `scheduled` etc.
 
 `ch_set_temperature` - CH temperature to be set.
 
 `dhw_set_temperature` - DHW temperature to be set.
+
+`dhw_scheduled_comfort_temperature` - DHW comfort temperature to be set.
+
+`dhw_scheduled_economy_temperature` - DHW economy temperature to be set.
+
+## Service use example
+```
+service: ariston.set_data
+data:
+    entity_id: climate.ariston
+    ch_set_temperature: 20.5
+```

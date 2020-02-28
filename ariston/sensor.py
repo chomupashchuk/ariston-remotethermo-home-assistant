@@ -10,10 +10,15 @@ from .const import (
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
+    PARAM_CH_ACCOUNT_GAS,
     PARAM_CH_ANTIFREEZE_TEMPERATURE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
-    PARAM_DETECTED_TEMPERATURE,
+    PARAM_CH_SCHEDULED_COMFORT_TEMPERATURE,
+    PARAM_CH_SCHEDULED_ECONOMY_TEMPERATURE,
+    PARAM_CH_DETECTED_TEMPERATURE,
+    PARAM_ERRORS,
+    PARAM_DHW_ACCOUNT_GAS,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_STORAGE_TEMPERATURE,
@@ -21,6 +26,14 @@ from .const import (
     PARAM_DHW_SCHEDULED_ECONOMY_TEMPERATURE,
     PARAM_MODE,
     PARAM_OUTSIDE_TEMPERATURE,
+    PARAM_HEATING_LAST_24H,
+    PARAM_HEATING_LAST_7d,
+    PARAM_HEATING_LAST_30d,
+    PARAM_HEATING_LAST_365d,
+    PARAM_WATER_LAST_24H,
+    PARAM_WATER_LAST_7D,
+    PARAM_WATER_LAST_30D,
+    PARAM_WATER_LAST_365D,
     VAL_UNKNOWN,
     VAL_UNSUPPORTED,
     VALUE_TO_CH_MODE,
@@ -40,17 +53,30 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sensor types are defined like: Name, units, icon
 SENSORS = {
+    PARAM_CH_ACCOUNT_GAS: ["CH Gas Use", 'kWh', "mdi:cash"],
     PARAM_CH_ANTIFREEZE_TEMPERATURE: ["CH Antifreeze Temperature", '°C', "mdi:thermometer"],
+    PARAM_CH_DETECTED_TEMPERATURE: ["CH Detected Temperature", '°C', "mdi:thermometer"],
     PARAM_CH_MODE: ["CH Mode", None, "mdi:hand"],
     PARAM_CH_SET_TEMPERATURE: ["CH Set Temperature", '°C', "mdi:thermometer"],
+    PARAM_CH_SCHEDULED_COMFORT_TEMPERATURE: ["CH Schedule Comfort Temperature", '°C', "mdi:thermometer"],
+    PARAM_CH_SCHEDULED_ECONOMY_TEMPERATURE: ["CH Schedule Economy Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_ACCOUNT_GAS: ["DHW Gas Use", 'kWh', "mdi:cash"],
     PARAM_DHW_SET_TEMPERATURE: ["DHW Set Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_STORAGE_TEMPERATURE: ["DHW Storage Temperature", '°C', "mdi:thermometer"],
-    PARAM_MODE: ["Mode", None, "mdi:water-boiler"],
-    PARAM_DETECTED_TEMPERATURE: ["Detected Temperature", '°C', "mdi:thermometer"],
-    PARAM_OUTSIDE_TEMPERATURE: ["Outside Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE: ["DHW Schedule Comfort Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_SCHEDULED_ECONOMY_TEMPERATURE: ["DHW Schedule Economy Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_MODE: ["DHW Mode", None, "mdi:hand"],
+    PARAM_MODE: ["Mode", None, "mdi:water-boiler"],
+    PARAM_OUTSIDE_TEMPERATURE: ["Outside Temperature", '°C', "mdi:thermometer"],
+    PARAM_ERRORS: ["Errors present", None, "mdi:alert-outline"],
+    PARAM_HEATING_LAST_24H: ["Gas for Heating use in last 24 hours", 'kWh', "mdi:cash"],
+    PARAM_HEATING_LAST_7d: ["Gas for Heating use in last 7 days", 'kWh', "mdi:cash"],
+    PARAM_HEATING_LAST_30d: ["Gas for Heating use in last 30 days", 'kWh', "mdi:cash"],
+    PARAM_HEATING_LAST_365d: ["Gas for Heating use in last 365 days", 'kWh', "mdi:cash"],
+    PARAM_WATER_LAST_24H: ["Gas for Water use in last 24 hours", 'kWh', "mdi:cash"],
+    PARAM_WATER_LAST_7D: ["Gas for Water use in last 7 days", 'kWh', "mdi:cash"],
+    PARAM_WATER_LAST_30D: ["Gas for Water use in last 30 days", 'kWh', "mdi:cash"],
+    PARAM_WATER_LAST_365D: ["Gas for Water use in last 365 days", 'kWh', "mdi:cash"],
 }
 
 
@@ -122,9 +148,21 @@ class AristonSensor(Entity):
         _LOGGER.debug("Updating %s sensor", self._name)
 
         try:
-            if self._sensor_type == PARAM_DETECTED_TEMPERATURE:
+            if self._sensor_type == PARAM_CH_DETECTED_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["zone"]["roomTemp"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_CH_SCHEDULED_COMFORT_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_ch_data["comfortTemp"]["value"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_CH_SCHEDULED_ECONOMY_TEMPERATURE:
+                try:
+                    self._state = self._api._ariston_ch_data["economyTemp"]["value"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
 
@@ -201,6 +239,123 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_DHW_MODE:
                 try:
                     self._state = VALUE_TO_DHW_MODE[self._api._ariston_data["dhwMode"]]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_CH_ACCOUNT_GAS:
+                try:
+                    self._state = self._api._ariston_gas_data["account"]["gasHeat"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_DHW_ACCOUNT_GAS:
+                try:
+                    self._state = self._api._ariston_gas_data["account"]["gasDhw"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_ERRORS:
+                try:
+                    self._attrs = {}
+                    self._state = self._api._ariston_error_data["count"]
+                    for valid_error in self._api._ariston_error_data["result"]:
+                        self._attrs[valid_error] = ""
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_HEATING_LAST_24H:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["daily"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y2"]
+                        sum = sum + item["y2"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_WATER_LAST_24H:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["daily"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y"]
+                        sum = sum + item["y"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_HEATING_LAST_7d:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["weekly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y2"]
+                        sum = sum + item["y2"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_WATER_LAST_7D:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["weekly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y"]
+                        sum = sum + item["y"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_HEATING_LAST_30d:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["monthly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y2"]
+                        sum = sum + item["y2"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_WATER_LAST_30D:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["monthly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y"]
+                        sum = sum + item["y"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_HEATING_LAST_365d:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["yearly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y2"]
+                        sum = sum + item["y2"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_WATER_LAST_365D:
+                try:
+                    sum = 0
+                    iteration = 1
+                    for item in self._api._ariston_gas_data["yearly"]["data"]:
+                        self._attrs["Period"+str(iteration)] = item["y"]
+                        sum = sum + item["y"]
+                        iteration = iteration + 1
+                    self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
 

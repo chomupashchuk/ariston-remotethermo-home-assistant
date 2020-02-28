@@ -19,6 +19,7 @@ from .const import (
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
+    PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE,
     PARAM_MODE,
     VAL_MODE_OFF,
     VAL_MODE_SUMMER,
@@ -213,7 +214,11 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api._set_http_data({PARAM_DHW_SET_TEMPERATURE: new_temperature})
+            if self._api._ariston_data["dhwTimeProgSupported"] == True and self._api._ariston_data[
+                "dhwTimeProgComfortActive"] == True:
+                self._api._set_http_data({PARAM_DHW_SET_TEMPERATURE: new_temperature})
+            else:
+                self._api._set_http_data({PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE: new_temperature})
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""

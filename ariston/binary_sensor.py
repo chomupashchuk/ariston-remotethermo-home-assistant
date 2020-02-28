@@ -18,6 +18,7 @@ from .const import (
     PARAM_ONLINE,
     PARAM_FLAME,
     PARAM_HEAT_PUMP,
+    PARAM_DHW_FLAME,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -35,6 +36,7 @@ BINARY_SENSORS = {
     PARAM_ONLINE: ("Online", DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
     PARAM_HEAT_PUMP: ("Heat Pump", DEVICE_CLASS_HEAT, None),
+    PARAM_DHW_FLAME: ("DHW Flame", DEVICE_CLASS_HEAT, None),
 }
 
 
@@ -136,6 +138,13 @@ class AristonBinarySensor(BinarySensorDevice):
             elif self._sensor_type == PARAM_HEAT_PUMP:
                 try:
                     self._state = self._api._ariston_data["heatingPumpOn"]
+                except:
+                    self._state = False
+                    pass
+
+            elif self._sensor_type == PARAM_DHW_FLAME:
+                try:
+                    self._state = self._api._ariston_data["flameForDhw"]
                 except:
                     self._state = False
                     pass

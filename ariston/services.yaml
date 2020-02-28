@@ -19,3 +19,9 @@ set_data:
     dhw_set_temperature:
       description: "(Optional) Set DHW temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
+    dhw_scheduled_comfort_temperature:
+      description: "(Optional) Set DHW Scheduled Comfort temperature in C in steps of '1.0'. Value range depends on model."
+      example: 46
+    dhw_scheduled_economy_temperature:
+      description: "(Optional) Set DHW Scheduled Economy temperature in C in steps of '1.0'. Value range depends on model."
+      example: 46
