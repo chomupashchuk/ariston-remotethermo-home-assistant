@@ -11,9 +11,9 @@ from .const import (
     DEVICES,
     PARAM_MODE,
     SERVICE_UPDATE,
-    VAL_MODE_SUMMER,
-    VAL_MODE_OFF,
-    VAL_MODE_WINTER,
+    VAL_SUMMER,
+    VAL_OFF,
+    VAL_WINTER,
     VALUE_TO_MODE,
 )
 from .helpers import service_signal
@@ -84,7 +84,7 @@ class AristonSwitch(SwitchDevice):
         try:
             climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
             if self._switch_type == POWER:
-                if climate_mode == VAL_MODE_OFF:
+                if climate_mode == VAL_OFF:
                     status_on = False
                 else:
                     status_on = True
@@ -97,15 +97,15 @@ class AristonSwitch(SwitchDevice):
     def turn_on(self, **kwargs):
         """Turn the switch on."""
         if self._switch_type == POWER:
-            if self._api._device[CONF_POWER_ON].lower() == VAL_MODE_SUMMER.lower():
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER})
-            elif self._api._device[CONF_POWER_ON].lower() == VAL_MODE_WINTER.lower():
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER})
+            if self._api._device[CONF_POWER_ON].lower() == VAL_SUMMER.lower():
+                self._api._set_http_data({PARAM_MODE: VAL_SUMMER})
+            elif self._api._device[CONF_POWER_ON].lower() == VAL_WINTER.lower():
+                self._api._set_http_data({PARAM_MODE: VAL_WINTER})
 
     def turn_off(self, **kwargs):
         """Turn the device off."""
         if self._switch_type == POWER:
-            self._api._set_http_data({PARAM_MODE: VAL_MODE_OFF})
+            self._api._set_http_data({PARAM_MODE: VAL_OFF})
 
     def update(self):
         """Update data"""

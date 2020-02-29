@@ -28,12 +28,12 @@ from .const import (
     PARAM_CH_MODE,
     PARAM_MODE,
     PARAM_CH_SET_TEMPERATURE,
-    VAL_MODE_WINTER,
-    VAL_MODE_SUMMER,
-    VAL_MODE_HEATING_ONLY,
-    VAL_MODE_OFF,
-    VAL_CH_MODE_MANUAL,
-    VAL_CH_MODE_SCHEDULED,
+    VAL_WINTER,
+    VAL_SUMMER,
+    VAL_HEATING_ONLY,
+    VAL_OFF,
+    VAL_MANUAL,
+    VAL_SCHEDULED,
     VAL_HOLIDAY,
     VAL_OFFLINE,
     VALUE_TO_MODE,
@@ -53,7 +53,7 @@ SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
 
 SUPPORT_FLAGS = SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE
 SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_AUTO]
-SUPPORTED_PRESETS = [VAL_MODE_SUMMER, VAL_MODE_WINTER, VAL_MODE_OFF, VAL_MODE_HEATING_ONLY]
+SUPPORTED_PRESETS = [VAL_SUMMER, VAL_WINTER, VAL_OFF, VAL_HEATING_ONLY]
 
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
@@ -146,10 +146,10 @@ class AristonThermostat(ClimateDevice):
             climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
             climate_ch_mode = VALUE_TO_CH_MODE[self._api._ariston_data["zone"]["mode"]["value"]]
             curr_hvac_mode = HVAC_MODE_OFF
-            if climate_mode == VAL_MODE_WINTER:
-                if climate_ch_mode == VAL_CH_MODE_MANUAL:
+            if climate_mode in [VAL_WINTER, VAL_HEATING_ONLY]:
+                if climate_ch_mode == VAL_MANUAL:
                     curr_hvac_mode = HVAC_MODE_HEAT
-                elif climate_ch_mode == VAL_CH_MODE_SCHEDULED:
+                elif climate_ch_mode == VAL_SCHEDULED:
                     curr_hvac_mode = HVAC_MODE_AUTO
         except:
             curr_hvac_mode = HVAC_MODE_OFF
@@ -166,7 +166,7 @@ class AristonThermostat(ClimateDevice):
         """Return the current running hvac operation."""
         try:
             climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
-            if climate_mode != VAL_MODE_OFF and climate_mode != VAL_MODE_SUMMER:
+            if climate_mode != VAL_OFF:
                 if self._api._ariston_data["zone"]["heatRequest"] == True:
                     curr_hvac_action = CURRENT_HVAC_HEAT
                 elif self._api._ariston_data["flameSensor"] == True and self._api._ariston_data["flameForDhw"] != True:
@@ -229,13 +229,13 @@ class AristonThermostat(ClimateDevice):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
             if self._api._device[CONF_HVAC_OFF].lower() == "off":
-                self._api.set_http_data({PARAM_MODE: VAL_MODE_OFF})
+                self._api.set_http_data({PARAM_MODE: VAL_OFF})
             else:
-                self._api.set_http_data({PARAM_MODE: VAL_MODE_SUMMER})
+                self._api.set_http_data({PARAM_MODE: VAL_SUMMER})
         elif hvac_mode == HVAC_MODE_HEAT:
-            self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_MANUAL})
+            self._api.set_http_data({PARAM_MODE: VAL_WINTER, PARAM_CH_MODE: VAL_MANUAL})
         elif hvac_mode == HVAC_MODE_AUTO:
-            self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_SCHEDULED})
+            self._api.set_http_data({PARAM_MODE: VAL_WINTER, PARAM_CH_MODE: VAL_SCHEDULED})
 
     def set_preset_mode(self, preset_mode):
         """Set new target hvac mode."""
