@@ -45,7 +45,7 @@ DEFAULT_MAX = 30.0
 DEFAULT_TEMP = 0.0
 
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-STATE_SCAN_INTERVAL_SECS = 5
+STATE_SCAN_INTERVAL_SECS = 10
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -229,24 +229,24 @@ class AristonThermostat(ClimateDevice):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
             if self._api._device[CONF_HVAC_OFF].lower() == "off":
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_OFF})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_OFF})
             else:
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_SUMMER})
         elif hvac_mode == HVAC_MODE_HEAT:
-            self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_MANUAL})
+            self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_MANUAL})
         elif hvac_mode == HVAC_MODE_AUTO:
-            self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_SCHEDULED})
+            self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_CH_MODE: VAL_CH_MODE_SCHEDULED})
 
     def set_preset_mode(self, preset_mode):
         """Set new target hvac mode."""
         if preset_mode in SUPPORTED_PRESETS:
-            self._api._set_http_data({PARAM_MODE: preset_mode})
+            self._api.set_http_data({PARAM_MODE: preset_mode})
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api._set_http_data({PARAM_CH_SET_TEMPERATURE: new_temperature})
+            self._api.set_http_data({PARAM_CH_SET_TEMPERATURE: new_temperature})
 
     def update(self):
         """Update all Node data from Hive."""

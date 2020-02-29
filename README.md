@@ -43,6 +43,7 @@ With additional attributes if needed, which are described below.
   - `ch_scheduled_comfort_temperature` - CH comfort temperature for scheduled mode. Not supported on all models.
   - `ch_scheduled_economy_temperature` - CH economy temperature for scheduled mode. Not supported on all models.
   - `ch_set_temperature` - set CH temperature.
+  - `ch_schedule` - CH Schedule
   - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
   - `dhw_mode` - mode of DHW. Not supported on all models.
   - `dhw_scheduled_comfort_temperature` - DHW storage comfort temperature for scheduled mode. Not supported on all models.
@@ -62,7 +63,7 @@ With additional attributes if needed, which are described below.
   - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 **binary_sensors**
-  - `dhw_flame` - if water being heated (DHW).
+  - `changing_data` - if change of data is ongoing
   - `flame` - if boiler is heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
   - `holiday_mode` - if holiday mode switch on via application or site.
@@ -88,6 +89,7 @@ ariston:
     - ch_scheduled_comfort_temperature
     - ch_scheduled_economy_temperature
     - ch_set_temperature
+    - ch_schedule
     - dhw_account_gas
     - dhw_mode
     - dhw_scheduled_comfort_temperature
@@ -106,7 +108,7 @@ ariston:
     - water_last_365d
     - water_last_7d
   binary_sensors:
-    - dhw_flame
+    - changing_data
     - flame
     - holiday_mode
     - heat_pump
@@ -123,13 +125,17 @@ ariston:
 
 `ch_mode` - mode of CH: `manual`, `scheduled` etc.
 
-`ch_set_temperature` - CH temperature to be set.
+`ch_set_temperature` - CH temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston api)
 
-`dhw_set_temperature` - DHW temperature to be set.
+`ch_scheduled_comfort_temperature` - CH comfort temperature to be set.
 
-`dhw_scheduled_comfort_temperature` - DHW comfort temperature to be set.
+`ch_scheduled_economy_temperature` - CH economy temperature to be set.
 
-`dhw_scheduled_economy_temperature` - DHW economy temperature to be set.
+`dhw_set_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston api)
+
+`dhw_scheduled_comfort_temperature` - DHW comfort temperature to be set (not supported on my hardware to test).
+
+`dhw_scheduled_economy_temperature` - DHW economy temperature to be set (not supported on my hardware to test).
 
 ## Service use example
 ```

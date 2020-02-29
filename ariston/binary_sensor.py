@@ -18,13 +18,13 @@ from .const import (
     PARAM_ONLINE,
     PARAM_FLAME,
     PARAM_HEAT_PUMP,
-    PARAM_DHW_FLAME,
+    PARAM_CHANGING_DATA,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
 """BINARY_SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-BINARY_SENSOR_SCAN_INTERVAL_SECS = 5
+BINARY_SENSOR_SCAN_INTERVAL_SECS = 3
 
 SCAN_INTERVAL = timedelta(seconds=BINARY_SENSOR_SCAN_INTERVAL_SECS)
 
@@ -36,7 +36,7 @@ BINARY_SENSORS = {
     PARAM_ONLINE: ("Online", DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
     PARAM_HEAT_PUMP: ("Heat Pump", DEVICE_CLASS_HEAT, None),
-    PARAM_DHW_FLAME: ("DHW Flame", DEVICE_CLASS_HEAT, None),
+    PARAM_CHANGING_DATA: ("Changing Data via HA", None, "mdi:cogs"),
 }
 
 
@@ -142,12 +142,11 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = False
                     pass
 
-            elif self._sensor_type == PARAM_DHW_FLAME:
-                try:
-                    self._state = self._api._ariston_data["flameForDhw"]
-                except:
+            elif self._sensor_type == PARAM_CHANGING_DATA:
+                if self._api._set_param == {}:
                     self._state = False
-                    pass
+                else:
+                    self._state = True
 
         except AristonError as error:
             log_update_error(_LOGGER, "update", self.name, "binary sensor", error)

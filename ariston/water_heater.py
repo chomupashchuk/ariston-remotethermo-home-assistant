@@ -41,7 +41,7 @@ from .const import (
 DEFAULT_MIN = 36.0
 DEFAULT_MAX = 60.0
 DEFAULT_TEMP = 0.0
-STATE_SCAN_INTERVAL_SECS = 5
+STATE_SCAN_INTERVAL_SECS = 10
 
 SUPPORT_FLAGS_HEATER = (SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE)
 SUPPORTED_OPERATIONS_1 = [
@@ -214,25 +214,21 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            if self._api._ariston_data["dhwTimeProgSupported"] == True and self._api._ariston_data[
-                "dhwTimeProgComfortActive"] == True:
-                self._api._set_http_data({PARAM_DHW_SET_TEMPERATURE: new_temperature})
-            else:
-                self._api._set_http_data({PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE: new_temperature})
+            self._api.set_http_data({PARAM_DHW_SET_TEMPERATURE: new_temperature})
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""
         if operation_mode in SUPPORTED_OPERATIONS_1:
-            self._api._set_http_data({PARAM_MODE: operation_mode})
+            self._api.set_http_data({PARAM_MODE: operation_mode})
         elif operation_mode in SUPPORTED_OPERATIONS_2:
             if operation_mode == VAL_MODE_SUMMER_MANUAL:
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
             elif operation_mode == VAL_MODE_SUMMER_SCHEDULED:
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_SUMMER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
             elif operation_mode == VAL_MODE_SUMMER_MANUAL:
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_MANUAL})
             elif operation_mode == VAL_MODE_SUMMER_MANUAL:
-                self._api._set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
+                self._api.set_http_data({PARAM_MODE: VAL_MODE_WINTER, PARAM_DHW_MODE: VAL_CH_MODE_SCHEDULED})
 
     def update(self):
         """Update all Node data from Hive."""

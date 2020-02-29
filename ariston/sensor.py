@@ -8,6 +8,7 @@ from homeassistant.helpers.entity import Entity
 
 from .const import (
     DATA_ARISTON,
+    DAYS_OF_WEEK,
     DEVICES,
     SERVICE_UPDATE,
     PARAM_CH_ACCOUNT_GAS,
@@ -17,6 +18,7 @@ from .const import (
     PARAM_CH_SCHEDULED_COMFORT_TEMPERATURE,
     PARAM_CH_SCHEDULED_ECONOMY_TEMPERATURE,
     PARAM_CH_DETECTED_TEMPERATURE,
+    PARAM_CH_SCHEDULE,
     PARAM_ERRORS,
     PARAM_DHW_ACCOUNT_GAS,
     PARAM_DHW_MODE,
@@ -34,6 +36,7 @@ from .const import (
     PARAM_WATER_LAST_7D,
     PARAM_WATER_LAST_30D,
     PARAM_WATER_LAST_365D,
+    VAL_AVAILABLE,
     VAL_UNKNOWN,
     VAL_UNSUPPORTED,
     VALUE_TO_CH_MODE,
@@ -77,6 +80,7 @@ SENSORS = {
     PARAM_WATER_LAST_7D: ["Gas for Water use in last 7 days", 'kWh', "mdi:cash"],
     PARAM_WATER_LAST_30D: ["Gas for Water use in last 30 days", 'kWh', "mdi:cash"],
     PARAM_WATER_LAST_365D: ["Gas for Water use in last 365 days", 'kWh', "mdi:cash"],
+    PARAM_CH_SCHEDULE: ["CH Schedule", None, "mdi:calendar-month"],
 }
 
 
@@ -357,6 +361,24 @@ class AristonSensor(Entity):
                         iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
+                    self._state = VAL_UNKNOWN
+
+            elif self._sensor_type == PARAM_CH_SCHEDULE:
+                try:
+                    if self._api._ariston_ch_data != {}:
+                        self._state = VAL_AVAILABLE
+                        for day_of_week in DAYS_OF_WEEK:
+                            if day_of_week in self._api._ariston_ch_data:
+                                for day_slices in self._api._ariston_ch_data[day_of_week]["slices"]:
+                                    attribute_name = day_of_week + '_' + day_slices["from"] + '_' + day_slices["to"]
+                                    if day_slices["temperatureId"] == 1:
+                                        attribute_value = "Comfort"
+                                    else:
+                                        attribute_value = "Economy"
+                                    self._attrs[attribute_name] = attribute_value
+                    else:
+                        self._state = VAL_UNKNOWN
+                except:
                     self._state = VAL_UNKNOWN
 
         except AristonError as error:

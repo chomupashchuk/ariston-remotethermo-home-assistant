@@ -11,11 +11,17 @@ set_data:
       description: "(Optional) CH mode: 'manual' or 'scheduled' or 'intelligent'. Values depend on model."
       example: manual
     dhw_mode:
-      description: "(Optional) DHW mode: 'winter' or 'summer' or 'off' or 'heating only' or 'summer manual' or 'summer scheduled' or 'winter manual' or 'winter scheduled'. Values depend on model."
+      description: "(Optional) DHW mode: 'manual' or 'scheduled'. Values depend on model."
       example: manual
     ch_set_temperature:
       description: "(Optional) Set CH temperature in C in steps of '0.5'. Value range depends on model."
       example: 21.5
+    ch_scheduled_comfort_temperature:
+      description: "(Optional) Set CH Scheduled Comfort temperature in C in steps of '0.5'. Value range depends on model."
+      example: 23
+    ch_scheduled_economy_temperature:
+      description: "(Optional) Set CH Scheduled Economy temperature in C in steps of '0.5'. Value range depends on model."
+      example: 23.5
     dhw_set_temperature:
       description: "(Optional) Set DHW temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
