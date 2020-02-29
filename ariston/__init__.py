@@ -961,7 +961,7 @@ def setup(hass, config):
             track_point_in_time(api._hass, api._get_ch_data, dt_util.now() + timedelta(seconds=20))
             track_point_in_time(api._hass, api._get_error_data, dt_util.now() + timedelta(seconds=30))
             track_point_in_time(api._hass, api._get_gas_water_data, dt_util.now() + timedelta(seconds=40))
-            track_point_in_time(api._hass, api._get_other_data, dt_util.now() + timedelta(seconds=50))
+            #track_point_in_time(api._hass, api._get_other_data, dt_util.now() + timedelta(seconds=50))
         except LoginError as ex:
             _LOGGER.error("Login error for %s: %s", name, ex)
             pass
