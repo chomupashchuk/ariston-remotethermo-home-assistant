@@ -63,7 +63,7 @@ With additional attributes if needed, which are described below.
   - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 **binary_sensors**
-  - `changing_data` - if change of data is ongoing
+  - `changing_data` - if change of data via Home Assistant is ongoing
   - `flame` - if boiler is heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
   - `holiday_mode` - if holiday mode switch on via application or site.
