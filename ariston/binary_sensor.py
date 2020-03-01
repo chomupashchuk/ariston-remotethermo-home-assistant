@@ -11,6 +11,8 @@ from homeassistant.const import CONF_BINARY_SENSORS, CONF_NAME
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
+    ARISTON_INTERNET_TIME,
+    ARISTON_INTERNET_WEATHER,
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
@@ -19,6 +21,8 @@ from .const import (
     PARAM_FLAME,
     PARAM_HEAT_PUMP,
     PARAM_CHANGING_DATA,
+    PARAM_INTERNET_TIME,
+    PARAM_INTERNET_WEATHER,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -37,6 +41,8 @@ BINARY_SENSORS = {
     PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
     PARAM_HEAT_PUMP: ("Heat Pump", DEVICE_CLASS_HEAT, None),
     PARAM_CHANGING_DATA: ("Changing Data via HA", None, "mdi:cogs"),
+    PARAM_INTERNET_TIME: ("Internet Time", None, "mdi:update"),
+    PARAM_INTERNET_WEATHER: ("Internet Weather", None, "mdi:weather-partly-cloudy"),
 }
 
 
@@ -99,7 +105,10 @@ class AristonBinarySensor(BinarySensorDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        return self._sensor_type == PARAM_ONLINE or self._api.available
+        if self._sensor_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER]:
+            return self._api.available and self._api._ariston_other_data != {}
+        else:
+            return self._sensor_type == PARAM_ONLINE or self._api.available
 
     @property
     def icon(self):
@@ -147,6 +156,28 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = False
                 else:
                     self._state = True
+
+            elif self._sensor_type == PARAM_INTERNET_TIME:
+                self._state = False
+                try:
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_INTERNET_TIME:
+                            if param_item["value"] == 1:
+                                self._state = True
+                                break
+                except:
+                    pass
+
+            elif self._sensor_type == PARAM_INTERNET_WEATHER:
+                self._state = False
+                try:
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_INTERNET_WEATHER:
+                            if param_item["value"] == 1:
+                                self._state = True
+                                break
+                except:
+                    pass
 
         except AristonError as error:
             log_update_error(_LOGGER, "update", self.name, "binary sensor", error)

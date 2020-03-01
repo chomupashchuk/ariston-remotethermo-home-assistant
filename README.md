@@ -1,11 +1,14 @@
-# Ariston NET remotethermo integration for Home Assistant
+## Ariston NET remotethermo integration for Home Assistant
 Thin integration is a side project (my first integration) and was tested only with 1 zone climate. It logs in Ariston website and fetches/sets data on that site. Due to interaction with boiler it is time consuming process and thus intergation is relatively slow.
 You are free to modify and distribute it, but it is distributed 'as is' with no liability (see license file).
 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
 
+### Integration was tested on:
+  - Ariston Clas Evo
+  - Ariston Genus One
 
-## Integration installation
+### Integration installation
 In `/config` folder create `custom_components` folder and load source files folder `ariston` in it
 In `configuration.yaml` include:
 ```
@@ -16,7 +19,7 @@ ariston:
 With additional attributes if needed, which are described below.
 
 
-## Integration attributes
+#### Integration attributes
 **username** - **mandatory** user name used in https://www.ariston-net.remotethermo.com
 
 **password** - **mandatory** password used in https://www.ariston-net.remotethermo.com
@@ -45,6 +48,7 @@ With additional attributes if needed, which are described below.
   - `ch_set_temperature` - set CH temperature.
   - `ch_schedule` - CH Schedule
   - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
+  - `dhw_comfort_function` - DHW comfort function.
   - `dhw_mode` - mode of DHW. Not supported on all models.
   - `dhw_scheduled_comfort_temperature` - DHW storage comfort temperature for scheduled mode. Not supported on all models.
   - `dhw_scheduled_economy_temperature` - DHW storage economy temperature for scheduled mode. Not supported on all models.
@@ -57,20 +61,23 @@ With additional attributes if needed, which are described below.
   - `heating_last_7d` - gas use in last 365 days. Not supported on all models.
   - `mode` - mode of boiler (`off` or `summer` or `winter` and others).
   - `outside_temperature` - outside temperature. Not supported on all models.
+  - `signal_strength` - Wifi signal strength.
   - `water_last_24h` - water use in last 24 hours. Not supported on all models.
   - `water_last_30d` - water use in last 7 days. Not supported on all models.
   - `water_last_365d` - water use in last 30 days. Not supported on all models.
   - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 **binary_sensors**
-  - `changing_data` - if change of data via Home Assistant is ongoing
+  - `changing_data` - if change of data via Home Assistant is ongoing.
   - `flame` - if boiler is heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
   - `holiday_mode` - if holiday mode switch on via application or site.
+  - `internet_time` - if time from the internet is used.
+  - `internet_weather` - if weather from the internet is used.
   - `online` - online status.
 
 
-## Example of configuration.yaml entry
+#### Example of configuration.yaml entry
 ```
 ariston:
   username: !secret ariston_user
@@ -91,6 +98,7 @@ ariston:
     - ch_set_temperature
     - ch_schedule
     - dhw_account_gas
+    - dhw_comfort_function
     - dhw_mode
     - dhw_scheduled_comfort_temperature
     - dhw_scheduled_economy_temperature
@@ -103,6 +111,7 @@ ariston:
     - heating_last_7d
     - mode
     - outside_temperature
+    - signal_strength
     - water_last_24h
     - water_last_30d
     - water_last_365d
@@ -112,32 +121,34 @@ ariston:
     - flame
     - holiday_mode
     - heat_pump
+    - internet_time
+    - internet_weather
     - online
 ```
 
-## Services
+### Services
 `ariston.set_data` - sets data in the boiler. Uses **max_retries** attribute from configuration.
 
-### Service attributes:
+#### Service attributes:
 `entity_id` - **mandatory** entity of Ariston `climate`.
 
 `mode` - mode of the boiler: `off`, `summer`, `winter` etc.
 
 `ch_mode` - mode of CH: `manual`, `scheduled` etc.
 
-`ch_set_temperature` - CH temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston api)
+`ch_set_temperature` - CH temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
 
-`ch_scheduled_comfort_temperature` - CH comfort temperature to be set.
+`ch_scheduled_comfort_temperature` - CH comfort temperature to be set. Also changes for manual setting (because Ariston).
 
 `ch_scheduled_economy_temperature` - CH economy temperature to be set.
 
-`dhw_set_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston api)
+`dhw_set_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
 
-`dhw_scheduled_comfort_temperature` - DHW comfort temperature to be set (not supported on my hardware to test).
+`dhw_scheduled_comfort_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
 
-`dhw_scheduled_economy_temperature` - DHW economy temperature to be set (not supported on my hardware to test).
+`dhw_scheduled_economy_temperature` - DHW economy temperature to be set.
 
-## Service use example
+#### Service use example
 ```
 service: ariston.set_data
 data:

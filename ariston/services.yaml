@@ -22,6 +22,9 @@ set_data:
     ch_scheduled_economy_temperature:
       description: "(Optional) Set CH Scheduled Economy temperature in C in steps of '0.5'. Value range depends on model."
       example: 23.5
+    dhw_comfort_function:
+      description: "(Optional) DHW Comfort Function: 'disabled' or 'time based' or 'always active'"
+      example: 'disabled'
     dhw_set_temperature:
       description: "(Optional) Set DHW temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
@@ -31,3 +34,9 @@ set_data:
     dhw_scheduled_economy_temperature:
       description: "(Optional) Set DHW Scheduled Economy temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
+    internet_time:
+      description: "(Optional) enable or disable time from internet"
+      example: true
+    internet_weather:
+      description: "(Optional) enable or disable weather from internet"
+      example: true
