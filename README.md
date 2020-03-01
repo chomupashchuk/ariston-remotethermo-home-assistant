@@ -6,7 +6,7 @@ Cimate and Water Heater components have presets to switch between `off`, `summer
 
 ### Integration was tested on:
   - Ariston Clas Evo
-  - Ariston Genus One
+  - Ariston Genus One with Ariston BCH cylinder
 
 ### Integration installation
 In `/config` folder create `custom_components` folder and load source files folder `ariston` in it
