@@ -107,6 +107,7 @@ DEFAULT_MODES = [0, 1, 5]
 DEFAULT_CH_MODES = [2, 3]
 HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + TIMER_SET_LOCK + 5
 HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_CH_MULTIPLY_TIME + TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_OTHER_MULTIPLY_TIME + TIMER_SET_LOCK + 5
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -801,7 +802,7 @@ class AristonChecker():
                             main_data_changed or ch_data_changed)) or self._set_ch_retry < self._set_max_retries):
 
                         # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_CH)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_PARAM)
                         track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
                         self._set_param_retry = self._set_param_retry + 1
                         self._set_scheduled = True
