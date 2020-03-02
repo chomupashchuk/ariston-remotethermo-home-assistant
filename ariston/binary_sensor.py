@@ -23,6 +23,13 @@ from .const import (
     PARAM_CHANGING_DATA,
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
+    BINARY_SENSOR_HOLIDAY_MODE,
+    BINARY_SENSOR_ONLINE,
+    BINARY_SENSOR_FLAME,
+    BINARY_SENSOR_HEAT_PUMP,
+    BINARY_SENSOR_CHANGING_DATA,
+    BINARY_SENSOR_INTERNET_TIME,
+    BINARY_SENSOR_INTERNET_WEATHER,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -36,13 +43,13 @@ _LOGGER = logging.getLogger(__name__)
 
 # Binary sensor types are defined like: Name, device class
 BINARY_SENSORS = {
-    PARAM_HOLIDAY_MODE: ("Holiday Mode", None, "mdi:island"),
-    PARAM_ONLINE: ("Online", DEVICE_CLASS_CONNECTIVITY, None),
-    PARAM_FLAME: ("Flame", DEVICE_CLASS_HEAT, None),
-    PARAM_HEAT_PUMP: ("Heat Pump", DEVICE_CLASS_HEAT, None),
-    PARAM_CHANGING_DATA: ("Changing Data via HA", None, "mdi:cogs"),
-    PARAM_INTERNET_TIME: ("Internet Time", None, "mdi:update"),
-    PARAM_INTERNET_WEATHER: ("Internet Weather", None, "mdi:weather-partly-cloudy"),
+    PARAM_HOLIDAY_MODE: (BINARY_SENSOR_HOLIDAY_MODE, None, "mdi:island"),
+    PARAM_ONLINE: (BINARY_SENSOR_ONLINE, DEVICE_CLASS_CONNECTIVITY, None),
+    PARAM_FLAME: (BINARY_SENSOR_FLAME, DEVICE_CLASS_HEAT, None),
+    PARAM_HEAT_PUMP: (BINARY_SENSOR_HEAT_PUMP, DEVICE_CLASS_HEAT, None),
+    PARAM_CHANGING_DATA: (BINARY_SENSOR_CHANGING_DATA, None, "mdi:cogs"),
+    PARAM_INTERNET_TIME: (BINARY_SENSOR_INTERNET_TIME, None, "mdi:update"),
+    PARAM_INTERNET_WEATHER: (BINARY_SENSOR_INTERNET_WEATHER, None, "mdi:weather-partly-cloudy"),
 }
 
 

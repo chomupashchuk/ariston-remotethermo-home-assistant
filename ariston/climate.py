@@ -233,7 +233,7 @@ class AristonThermostat(ClimateDevice):
     def set_hvac_mode(self, hvac_mode):
         """Set new target hvac mode."""
         if hvac_mode == HVAC_MODE_OFF:
-            if self._api._device[CONF_HVAC_OFF].lower() == "off":
+            if self._api._device[CONF_HVAC_OFF].lower() == VAL_OFF.lower():
                 self._api.set_http_data({PARAM_MODE: VAL_OFF})
             else:
                 self._api.set_http_data({PARAM_MODE: VAL_SUMMER})

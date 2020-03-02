@@ -120,9 +120,8 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
         vol.Optional(CONF_BINARY_SENSORS): vol.All(cv.ensure_list, [vol.In(BINARY_SENSORS)]),
         vol.Optional(CONF_SENSORS): vol.All(cv.ensure_list, [vol.In(SENSORS)]),
-        vol.Optional(CONF_HVAC_OFF, default=DEFAULT_HVAC): vol.In(["OFF", "off", "Off", "summer", "SUMMER", "Summer"]),
-        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In(
-            ["WINTER", "winter", "Winter", "summer", "SUMMER", "Summer"]),
+        vol.Optional(CONF_HVAC_OFF, default=DEFAULT_HVAC): vol.In([VAL_OFF, VAL_SUMMER]),
+        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In([VAL_WINTER, VAL_SUMMER]),
         vol.Optional(CONF_MAX_RETRIES, default=DEFAULT_MAX_RETRIES): vol.All(int, vol.Range(min=0, max=65535)),
         vol.Optional(CONF_SWITCHES): vol.All(cv.ensure_list, [vol.In(SWITCHES)]),
         vol.Optional(CONF_STORE_CONFIG_FILES, default=False): cv.boolean,
