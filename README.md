@@ -50,7 +50,7 @@ With additional attributes if needed, which are described below.
   - `ch_comfort_temperature` - CH comfort temperature.
   - `ch_economy_temperature` - CH economy temperature.
   - `ch_set_temperature` - set CH temperature.
-  - `ch_schedule` - CH Schedule
+  - `ch_program` - CH Time Program.
   - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
   - `dhw_comfort_function` - DHW comfort function.
   - `dhw_mode` - mode of DHW. Not supported on all models.
@@ -101,7 +101,7 @@ ariston:
     - ch_comfort_temperature
     - ch_economy_temperature
     - ch_set_temperature
-    - ch_schedule
+    - ch_program
     - dhw_account_gas
     - dhw_comfort_function
     - dhw_mode
