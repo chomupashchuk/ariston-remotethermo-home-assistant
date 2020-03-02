@@ -59,10 +59,10 @@ from .const import (
     PARAM_DHW_COMFORT_FUNCTION,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
-    PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE,
-    PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE,
-    PARAM_CH_PROGRAM_COMFORT_TEMPERATURE,
-    PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE,
+    PARAM_DHW_COMFORT_TEMPERATURE,
+    PARAM_DHW_ECONOMY_TEMPERATURE,
+    PARAM_CH_COMFORT_TEMPERATURE,
+    PARAM_CH_ECONOMY_TEMPERATURE,
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
     PARAM_STRING_TO_VALUE,
@@ -126,7 +126,7 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_MAX_RETRIES, default=DEFAULT_MAX_RETRIES): vol.All(int, vol.Range(min=0, max=65535)),
         vol.Optional(CONF_SWITCHES): vol.All(cv.ensure_list, [vol.In(SWITCHES)]),
         vol.Optional(CONF_STORE_CONFIG_FILES, default=False): cv.boolean,
-        vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=False): cv.boolean,
+        vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=True): cv.boolean,
         vol.Optional(CONF_HVAC_OFF_PRESENT, default=True): cv.boolean,
     }
 )
@@ -578,46 +578,46 @@ class AristonChecker():
                         set_data["NewValue"]["dhwTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         main_data_changed = True
 
-                if PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE in self._set_param:
+                if PARAM_DHW_COMFORT_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"] == self._set_param[
-                        PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE]:
+                        PARAM_DHW_COMFORT_TEMPERATURE]:
                         if max(self._set_time_start, self._set_time_start_param) < self._get_time_end:
                             # value should be up to date and match to remove from setting
-                            del self._set_param[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE]
+                            del self._set_param[PARAM_DHW_COMFORT_TEMPERATURE]
                         else:
                             # assume data was not yet changed
                             param_data = {
                                 "id": ARISTON_DHW_TIME_PROG_COMFORT,
-                                "newValue": self._set_param[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE],
+                                "newValue": self._set_param[PARAM_DHW_COMFORT_TEMPERATURE],
                                 "oldValue": set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"]}
                             set_param_data.append(param_data)
                             param_data_changed = True
                     else:
                         param_data = {
                             "id": ARISTON_DHW_TIME_PROG_COMFORT,
-                            "newValue": self._set_param[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE],
+                            "newValue": self._set_param[PARAM_DHW_COMFORT_TEMPERATURE],
                             "oldValue": set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"]}
                         set_param_data.append(param_data)
                         param_data_changed = True
 
-                if PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE in self._set_param:
+                if PARAM_DHW_ECONOMY_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"] == self._set_param[
-                        PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE]:
+                        PARAM_DHW_ECONOMY_TEMPERATURE]:
                         if max(self._set_time_start, self._set_time_start_param) < self._get_time_end:
                             # value should be up to date and match to remove from setting
-                            del self._set_param[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE]
+                            del self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE]
                         else:
                             # assume data was not yet changed
                             param_data = {
                                 "id": ARISTON_DHW_TIME_PROG_ECONOMY,
-                                "newValue": self._set_param[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE],
+                                "newValue": self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE],
                                 "oldValue": set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"]}
                             set_param_data.append(param_data)
                             param_data_changed = True
                     else:
                         param_data = {
                             "id": ARISTON_DHW_TIME_PROG_ECONOMY,
-                            "newValue": self._set_param[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE],
+                            "newValue": self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE],
                             "oldValue": set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"]}
                         set_param_data.append(param_data)
                         param_data_changed = True
@@ -722,36 +722,36 @@ class AristonChecker():
                         set_data["NewValue"]["zone"]["comfortTemp"]["value"] = self._set_param[PARAM_CH_SET_TEMPERATURE]
                         main_data_changed = True
 
-                if PARAM_CH_PROGRAM_COMFORT_TEMPERATURE in self._set_param:
+                if PARAM_CH_COMFORT_TEMPERATURE in self._set_param:
                     if set_ch_data != {}:
                         if set_ch_data["comfortTemp"]["value"] == self._set_param[
-                            PARAM_CH_PROGRAM_COMFORT_TEMPERATURE]:
+                            PARAM_CH_COMFORT_TEMPERATURE]:
                             if self._set_time_start_ch < self._get_time_end_ch:
                                 # value should be up to date and match to remove from setting
-                                del self._set_param[PARAM_CH_PROGRAM_COMFORT_TEMPERATURE]
+                                del self._set_param[PARAM_CH_COMFORT_TEMPERATURE]
                             else:
                                 # assume data was not yet changed
                                 ch_data_changed = True
                         else:
                             set_ch_data["comfortTemp"]["value"] = self._set_param[
-                                PARAM_CH_PROGRAM_COMFORT_TEMPERATURE]
+                                PARAM_CH_COMFORT_TEMPERATURE]
                             ch_data_changed = True
                     else:
                         ch_data_changed = True
 
-                if PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE in self._set_param:
+                if PARAM_CH_ECONOMY_TEMPERATURE in self._set_param:
                     if set_ch_data != {}:
                         if set_ch_data["economyTemp"]["value"] == self._set_param[
-                            PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE]:
+                            PARAM_CH_ECONOMY_TEMPERATURE]:
                             if self._set_time_start_ch < self._get_time_end_ch:
                                 # value should be up to date and match to remove from setting
-                                del self._set_param[PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE]
+                                del self._set_param[PARAM_CH_ECONOMY_TEMPERATURE]
                             else:
                                 # assume data was not yet changed
                                 ch_data_changed = True
                         else:
                             set_ch_data["economyTemp"]["value"] = self._set_param[
-                                PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE]
+                                PARAM_CH_ECONOMY_TEMPERATURE]
                             ch_data_changed = True
                     else:
                         ch_data_changed = True
@@ -982,14 +982,14 @@ class AristonChecker():
                         pass
 
                 # check dhw comfort temperature
-                if PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE in parameter_list:
-                    wanted_dhw_temperature = str(parameter_list[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE]).lower()
+                if PARAM_DHW_COMFORT_TEMPERATURE in parameter_list:
+                    wanted_dhw_temperature = str(parameter_list[PARAM_DHW_COMFORT_TEMPERATURE]).lower()
                     try:
                         # round to nearest 1
                         temperature = round(float(wanted_dhw_temperature))
                         if temperature >= self._ariston_data["dhwTemp"]["min"] and temperature <= \
                                 self._ariston_data["dhwTemp"]["max"]:
-                            self._set_param[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE] = temperature
+                            self._set_param[PARAM_DHW_COMFORT_TEMPERATURE] = temperature
                             _LOGGER.info('%s New DHW scheduled comfort temperature %s', self, temperature)
                         else:
                             _LOGGER.warning('%s Not supported DHW scheduled comfort temperature value: %s', self,
@@ -1000,14 +1000,14 @@ class AristonChecker():
                         pass
 
                 # check dhw economy temperature
-                if PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE in parameter_list:
-                    wanted_dhw_temperature = str(parameter_list[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE]).lower()
+                if PARAM_DHW_ECONOMY_TEMPERATURE in parameter_list:
+                    wanted_dhw_temperature = str(parameter_list[PARAM_DHW_ECONOMY_TEMPERATURE]).lower()
                     try:
                         # round to nearest 1
                         temperature = round(float(wanted_dhw_temperature))
                         if temperature >= self._ariston_data["dhwTemp"]["min"] and temperature <= \
                                 self._ariston_data["dhwTemp"]["max"]:
-                            self._set_param[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE] = temperature
+                            self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE] = temperature
                             _LOGGER.info('%s New DHW scheduled economy temperature %s', self, temperature)
                         else:
                             _LOGGER.warning('%s Not supported DHW scheduled economy temperature value: %s', self,
@@ -1034,14 +1034,14 @@ class AristonChecker():
                         pass
 
                 # check CH comfort scheduled temperature
-                if PARAM_CH_PROGRAM_COMFORT_TEMPERATURE in parameter_list:
-                    wanted_ch_temperature = str(parameter_list[PARAM_CH_PROGRAM_COMFORT_TEMPERATURE]).lower()
+                if PARAM_CH_COMFORT_TEMPERATURE in parameter_list:
+                    wanted_ch_temperature = str(parameter_list[PARAM_CH_COMFORT_TEMPERATURE]).lower()
                     try:
                         # round to nearest 0.5
                         temperature = round(float(wanted_ch_temperature) * 2.0) / 2.0
                         if temperature >= self._ariston_data["zone"]["comfortTemp"]["min"] and temperature <= \
                                 self._ariston_data["zone"]["comfortTemp"]["max"]:
-                            self._set_param[PARAM_CH_PROGRAM_COMFORT_TEMPERATURE] = temperature
+                            self._set_param[PARAM_CH_COMFORT_TEMPERATURE] = temperature
                             _LOGGER.info('%s New CH temperature %s', self, temperature)
                         else:
                             _LOGGER.warning('%s Not supported CH comfort scheduled temperature value: %s', self,
@@ -1052,14 +1052,14 @@ class AristonChecker():
                         pass
 
                 # check CH economy scheduled temperature
-                if PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE in parameter_list:
-                    wanted_ch_temperature = str(parameter_list[PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE]).lower()
+                if PARAM_CH_ECONOMY_TEMPERATURE in parameter_list:
+                    wanted_ch_temperature = str(parameter_list[PARAM_CH_ECONOMY_TEMPERATURE]).lower()
                     try:
                         # round to nearest 0.5
                         temperature = round(float(wanted_ch_temperature) * 2.0) / 2.0
                         if temperature >= self._ariston_data["zone"]["comfortTemp"]["min"] and temperature <= \
                                 self._ariston_data["zone"]["comfortTemp"]["max"]:
-                            self._set_param[PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE] = temperature
+                            self._set_param[PARAM_CH_ECONOMY_TEMPERATURE] = temperature
                             _LOGGER.info('%s New CH temperature %s', self, temperature)
                         else:
                             _LOGGER.warning('%s Not supported CH economy scheduled temperature value: %s', self,
@@ -1282,25 +1282,25 @@ def setup(hass, config):
                         if data != "":
                             parameter_list[PARAM_CH_SET_TEMPERATURE] = data
 
-                        data = call.data.get(PARAM_CH_PROGRAM_COMFORT_TEMPERATURE, "")
+                        data = call.data.get(PARAM_CH_COMFORT_TEMPERATURE, "")
                         if data != "":
-                            parameter_list[PARAM_CH_PROGRAM_COMFORT_TEMPERATURE] = data
+                            parameter_list[PARAM_CH_COMFORT_TEMPERATURE] = data
 
-                        data = call.data.get(PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE, "")
+                        data = call.data.get(PARAM_CH_ECONOMY_TEMPERATURE, "")
                         if data != "":
-                            parameter_list[PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE] = data
+                            parameter_list[PARAM_CH_ECONOMY_TEMPERATURE] = data
 
                         data = call.data.get(PARAM_DHW_SET_TEMPERATURE, "")
                         if data != "":
                             parameter_list[PARAM_DHW_SET_TEMPERATURE] = data
 
-                        data = call.data.get(PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE, "")
+                        data = call.data.get(PARAM_DHW_COMFORT_TEMPERATURE, "")
                         if data != "":
-                            parameter_list[PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE] = data
+                            parameter_list[PARAM_DHW_COMFORT_TEMPERATURE] = data
 
-                        data = call.data.get(PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE, "")
+                        data = call.data.get(PARAM_DHW_ECONOMY_TEMPERATURE, "")
                         if data != "":
-                            parameter_list[PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE] = data
+                            parameter_list[PARAM_DHW_ECONOMY_TEMPERATURE] = data
 
                         data = call.data.get(PARAM_DHW_MODE, "")
                         if data != "":

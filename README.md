@@ -29,11 +29,15 @@ With additional attributes if needed, which are described below.
 
 **hvac_off** - indicates how to treat `HVAC OFF` action in climate. Options are `off` and `summer`. By default it is `summer`, which means that turning off would keep DHW water heating on (e.g. summer mode). Presets in climate allow switching between `off`, `summer` and `winter`.
 
+**hvac_off_present** - indicates if `HVAC OFF` shall be present in climate entity. Default value is `true`.
+
 **power_on** - indicates which mode would be used for `switch.turn_on` action. Options are `summer` and `winter`. By default it is `summer`.
 
 **max_retries** - number of retries to set the data in boiler. Retries are made in case of communication issues for example, which take place occasionally. By default the value is '1'.
 
-**store_config_files** - `true` or `false` indicating if configuration `json` files to be stored in `/config` folder.
+**store_config_files** - `true` or `false` indicating if configuration `json` files to be stored in `/config` folder. Default value is `false`.
+
+**control_from_water_heater** - if `water_heater` entity will have controling parameters like `summer` or `winter` or `off`. Default value is `true`.
 
 **switches** - lists switches to be defined
   - `power` - turn power off and on (on value is defined by **power_on**).
@@ -43,15 +47,15 @@ With additional attributes if needed, which are described below.
   - `ch_antifreeze_temperature` - CH antifreeze temperature.
   - `ch_detected_temperature` - temperature measured by thermostat.
   - `ch_mode` - mode of CH (`manual` or `scheduled` and others).
-  - `ch_scheduled_comfort_temperature` - CH comfort temperature for scheduled mode. Not supported on all models.
-  - `ch_scheduled_economy_temperature` - CH economy temperature for scheduled mode. Not supported on all models.
+  - `ch_comfort_temperature` - CH comfort temperature.
+  - `ch_economy_temperature` - CH economy temperature.
   - `ch_set_temperature` - set CH temperature.
   - `ch_schedule` - CH Schedule
   - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
   - `dhw_comfort_function` - DHW comfort function.
   - `dhw_mode` - mode of DHW. Not supported on all models.
-  - `dhw_scheduled_comfort_temperature` - DHW storage comfort temperature for scheduled mode. Not supported on all models.
-  - `dhw_scheduled_economy_temperature` - DHW storage economy temperature for scheduled mode. Not supported on all models.
+  - `dhw_comfort_temperature` - DHW storage comfort temperature. Not supported on all models.
+  - `dhw_economy_temperature` - DHW storage economy temperature. Not supported on all models.
   - `dhw_set_temperature` - set DHW temperature.
   - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
   - `errors` - active errors (no errors to test on)
@@ -82,7 +86,8 @@ With additional attributes if needed, which are described below.
 ariston:
   username: !secret ariston_user
   password: !secret ariston_password
-  hvac_off: "summer"
+  hvac_off_present: false
+  control_from_water_heater: false
   power_on: "summer"
   store_config_files: true
   max_retries: 5
@@ -93,15 +98,15 @@ ariston:
     - ch_antifreeze_temperature
     - ch_detected_temperature
     - ch_mode
-    - ch_scheduled_comfort_temperature
-    - ch_scheduled_economy_temperature
+    - ch_comfort_temperature
+    - ch_economy_temperature
     - ch_set_temperature
     - ch_schedule
     - dhw_account_gas
     - dhw_comfort_function
     - dhw_mode
-    - dhw_scheduled_comfort_temperature
-    - dhw_scheduled_economy_temperature
+    - dhw_comfort_temperature
+    - dhw_economy_temperature
     - dhw_set_temperature
     - dhw_storage_temperature
     - errors
@@ -131,22 +136,7 @@ ariston:
 
 #### Service attributes:
 `entity_id` - **mandatory** entity of Ariston `climate`.
-
-`mode` - mode of the boiler: `off`, `summer`, `winter` etc.
-
-`ch_mode` - mode of CH: `manual`, `scheduled` etc.
-
-`ch_set_temperature` - CH temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
-
-`ch_scheduled_comfort_temperature` - CH comfort temperature to be set. Also changes for manual setting (because Ariston).
-
-`ch_scheduled_economy_temperature` - CH economy temperature to be set.
-
-`dhw_set_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
-
-`dhw_scheduled_comfort_temperature` - DHW temperature to be set. Also changes comfort temperature for scheduled mode (because Ariston).
-
-`dhw_scheduled_economy_temperature` - DHW economy temperature to be set.
+for the rest of data see services within Home Assistant when selecting `ariston.set_data`.
 
 #### Service use example
 ```

@@ -20,7 +20,7 @@ from .const import (
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
-    PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE,
+    PARAM_DHW_COMFORT_TEMPERATURE,
     PARAM_MODE,
     VAL_OFF,
     VAL_SUMMER,
@@ -49,7 +49,7 @@ SUPPORTED_OPERATIONS_1 = [
     VAL_OFF,
     VAL_SUMMER,
     VAL_WINTER,
-    VAL_HEATING_ONLY,
+    VAL_HEATING_ONLY
 ]
 SUPPORTED_OPERATIONS_2 = [
     VAL_MANUAL,
@@ -169,10 +169,10 @@ class AristonWaterHeater(WaterHeaterDevice):
         if self._api._device[CONF_CONTROL_FROM_WATER_HEATER] == True:
             for item in SUPPORTED_OPERATIONS_1:
                 op_list.append(item)
-                if not "allowedModes" in self._api._ariston_data:
-                    op_list.remove(VAL_HEATING_ONLY)
-                elif not MODE_TO_VALUE[VAL_HEATING_ONLY] in self._api._ariston_data["allowedModes"]:
-                    op_list.remove(VAL_HEATING_ONLY)
+            if not "allowedModes" in self._api._ariston_data:
+                op_list.remove(VAL_HEATING_ONLY)
+            elif not MODE_TO_VALUE[VAL_HEATING_ONLY] in self._api._ariston_data["allowedModes"]:
+                op_list.remove(VAL_HEATING_ONLY)
         if "dhwModeNotChangeable" in self._api._ariston_data:
             if self._api._ariston_data["dhwModeNotChangeable"] == False:
                 op_list.append(VAL_MANUAL)
@@ -211,7 +211,7 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api.set_http_data({PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE: new_temperature})
+            self._api.set_http_data({PARAM_DHW_COMFORT_TEMPERATURE: new_temperature})
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""

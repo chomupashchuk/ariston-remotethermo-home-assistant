@@ -18,8 +18,8 @@ from .const import (
     PARAM_CH_ANTIFREEZE_TEMPERATURE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
-    PARAM_CH_PROGRAM_COMFORT_TEMPERATURE,
-    PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE,
+    PARAM_CH_COMFORT_TEMPERATURE,
+    PARAM_CH_ECONOMY_TEMPERATURE,
     PARAM_CH_DETECTED_TEMPERATURE,
     PARAM_CH_PROGRAM,
     PARAM_ERRORS,
@@ -28,8 +28,8 @@ from .const import (
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_STORAGE_TEMPERATURE,
-    PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE,
-    PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE,
+    PARAM_DHW_COMFORT_TEMPERATURE,
+    PARAM_DHW_ECONOMY_TEMPERATURE,
     PARAM_MODE,
     PARAM_OUTSIDE_TEMPERATURE,
     PARAM_HEATING_LAST_24H,
@@ -67,14 +67,14 @@ SENSORS = {
     PARAM_CH_MODE: ["CH Mode", None, "mdi:hand"],
     PARAM_CH_SET_TEMPERATURE: ["CH Set Temperature", '°C', "mdi:thermometer"],
     PARAM_CH_PROGRAM: ["CH Schedule", None, "mdi:calendar-month"],
-    PARAM_CH_PROGRAM_COMFORT_TEMPERATURE: ["CH Schedule Comfort Temperature", '°C', "mdi:thermometer"],
-    PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE: ["CH Schedule Economy Temperature", '°C', "mdi:thermometer"],
+    PARAM_CH_COMFORT_TEMPERATURE: ["CH Schedule Comfort Temperature", '°C', "mdi:thermometer"],
+    PARAM_CH_ECONOMY_TEMPERATURE: ["CH Schedule Economy Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_ACCOUNT_GAS: ["DHW Gas Use", 'kWh', "mdi:cash"],
     PARAM_DHW_COMFORT_FUNCTION: ["DHW Comfort Function", None, "mdi:hand-water"],
     PARAM_DHW_SET_TEMPERATURE: ["DHW Set Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_STORAGE_TEMPERATURE: ["DHW Storage Temperature", '°C', "mdi:thermometer"],
-    PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE: ["DHW Schedule Comfort Temperature", '°C', "mdi:thermometer"],
-    PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE: ["DHW Schedule Economy Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_COMFORT_TEMPERATURE: ["DHW Schedule Comfort Temperature", '°C', "mdi:thermometer"],
+    PARAM_DHW_ECONOMY_TEMPERATURE: ["DHW Schedule Economy Temperature", '°C', "mdi:thermometer"],
     PARAM_DHW_MODE: ["DHW Mode", None, "mdi:hand"],
     PARAM_ERRORS: ["Errors present", None, "mdi:alert-outline"],
     PARAM_HEATING_LAST_24H: ["Gas for Heating use in last 24 hours", 'kWh', "mdi:cash"],
@@ -184,14 +184,14 @@ class AristonSensor(Entity):
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_CH_PROGRAM_COMFORT_TEMPERATURE:
+            elif self._sensor_type == PARAM_CH_COMFORT_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_ch_data["comfortTemp"]["value"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_CH_PROGRAM_ECONOMY_TEMPERATURE:
+            elif self._sensor_type == PARAM_CH_ECONOMY_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_ch_data["economyTemp"]["value"]
                 except KeyError:
@@ -259,7 +259,7 @@ class AristonSensor(Entity):
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE:
+            elif self._sensor_type == PARAM_DHW_COMFORT_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["dhwTimeProgComfortTemp"]["value"]
                     if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:
@@ -268,7 +268,7 @@ class AristonSensor(Entity):
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_DHW_PROGRAM_ECONOMY_TEMPERATURE:
+            elif self._sensor_type == PARAM_DHW_ECONOMY_TEMPERATURE:
                 try:
                     self._state = self._api._ariston_data["dhwTimeProgEconomyTemp"]["value"]
                     if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:

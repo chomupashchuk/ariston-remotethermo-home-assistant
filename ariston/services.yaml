@@ -8,35 +8,29 @@ set_data:
       description: "(Optional) General mode: 'winter' or 'summer' or 'off' or 'heating only'. Values depend on model."
       example: winter
     ch_mode:
-      description: "(Optional) CH mode: 'manual' or 'program' or 'intelligent'. Values depend on model."
+      description: "(Optional) CH mode: 'manual' or 'program'."
       example: manual
-    dhw_mode:
-      description: "(Optional) DHW mode: 'manual' or 'program'. Values depend on model."
-      example: manual
-    ch_set_temperature:
-      description: "(Optional) Set CH temperature in C in steps of '0.5'. Value range depends on model."
-      example: 21.5
-    ch_scheduled_comfort_temperature:
-      description: "(Optional) Set CH Time Program Comfort temperature in C in steps of '0.5'. Value range depends on model."
+    ch_comfort_temperature:
+      description: "(Optional) Set CH Comfort temperature in C in steps of '0.5'. Value range depends on model."
       example: 23
-    ch_program_economy_temperature:
-      description: "(Optional) Set CH Time Program Economy temperature in C in steps of '0.5'. Value range depends on model."
+    ch_economy_temperature:
+      description: "(Optional) Set CH Economy temperature in C in steps of '0.5'. Value range depends on model."
       example: 23.5
+    dhw_mode:
+      description: "(Optional) DHW mode: 'manual' or 'program'. Support depends on model."
+      example: manual
     dhw_comfort_function:
       description: "(Optional) DHW Comfort Function: 'disabled' or 'time based' or 'always active'"
       example: 'disabled'
-    dhw_set_temperature:
-      description: "(Optional) Set DHW temperature in C in steps of '1.0'. Value range depends on model."
+    dhw_comfort_temperature:
+      description: "(Optional) Set DHW Comfort temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
-    dhw_program_comfort_temperature:
-      description: "(Optional) Set DHW Time Program Comfort temperature in C in steps of '1.0'. Value range depends on model."
-      example: 46
-    dhw_program_economy_temperature:
-      description: "(Optional) Set DHW Time Program Economy temperature in C in steps of '1.0'. Value range depends on model."
+    dhw_economy_temperature:
+      description: "(Optional) Set DHW Economy temperature in C in steps of '1.0'. Value range depends on model."
       example: 46
     internet_time:
-      description: "(Optional) enable or disable time from internet"
+      description: "(Optional) enable or disable time from internet (boolean)."
       example: true
     internet_weather:
-      description: "(Optional) enable or disable weather from internet"
+      description: "(Optional) enable or disable weather from internet (boolean)."
       example: true
