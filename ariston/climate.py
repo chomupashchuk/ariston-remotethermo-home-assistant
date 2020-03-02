@@ -23,6 +23,7 @@ from homeassistant.const import (
 
 from .const import (
     CONF_HVAC_OFF,
+    CONF_HVAC_OFF_PRESENT,
     DATA_ARISTON,
     DEVICES,
     PARAM_CH_MODE,
@@ -33,7 +34,7 @@ from .const import (
     VAL_HEATING_ONLY,
     VAL_OFF,
     VAL_MANUAL,
-    VAL_SCHEDULED,
+    VAL_PROGRAM,
     VAL_HOLIDAY,
     VAL_OFFLINE,
     VALUE_TO_MODE,
@@ -52,7 +53,8 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
 
 SUPPORT_FLAGS = SUPPORT_PRESET_MODE | SUPPORT_TARGET_TEMPERATURE
-SUPPORTED_HVAC_MODES = [HVAC_MODE_HEAT, HVAC_MODE_OFF, HVAC_MODE_AUTO]
+SUPPORTED_HVAC_MODES = [HVAC_MODE_AUTO, HVAC_MODE_HEAT, HVAC_MODE_OFF]
+SUPPORTED_HVAC_MODES_NO_OFF = [HVAC_MODE_AUTO, HVAC_MODE_HEAT]
 SUPPORTED_PRESETS = [VAL_SUMMER, VAL_WINTER, VAL_OFF, VAL_HEATING_ONLY]
 
 
@@ -149,7 +151,7 @@ class AristonThermostat(ClimateDevice):
             if climate_mode in [VAL_WINTER, VAL_HEATING_ONLY]:
                 if climate_ch_mode == VAL_MANUAL:
                     curr_hvac_mode = HVAC_MODE_HEAT
-                elif climate_ch_mode == VAL_SCHEDULED:
+                elif climate_ch_mode == VAL_PROGRAM:
                     curr_hvac_mode = HVAC_MODE_AUTO
         except:
             curr_hvac_mode = HVAC_MODE_OFF
@@ -159,7 +161,10 @@ class AristonThermostat(ClimateDevice):
     @property
     def hvac_modes(self):
         """HVAC modes."""
-        return SUPPORTED_HVAC_MODES
+        if self._api._device[CONF_HVAC_OFF_PRESENT] == True:
+            return SUPPORTED_HVAC_MODES
+        else:
+            return SUPPORTED_HVAC_MODES_NO_OFF
 
     @property
     def hvac_action(self):
@@ -235,7 +240,7 @@ class AristonThermostat(ClimateDevice):
         elif hvac_mode == HVAC_MODE_HEAT:
             self._api.set_http_data({PARAM_MODE: VAL_WINTER, PARAM_CH_MODE: VAL_MANUAL})
         elif hvac_mode == HVAC_MODE_AUTO:
-            self._api.set_http_data({PARAM_MODE: VAL_WINTER, PARAM_CH_MODE: VAL_SCHEDULED})
+            self._api.set_http_data({PARAM_MODE: VAL_WINTER, PARAM_CH_MODE: VAL_PROGRAM})
 
     def set_preset_mode(self, preset_mode):
         """Set new target hvac mode."""

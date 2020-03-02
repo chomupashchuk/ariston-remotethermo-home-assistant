@@ -16,22 +16,23 @@ from homeassistant.const import (
 from .const import (
     DATA_ARISTON,
     DEVICES,
+    CONF_CONTROL_FROM_WATER_HEATER,
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
-    PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE,
+    PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE,
     PARAM_MODE,
     VAL_OFF,
     VAL_SUMMER,
     VAL_WINTER,
     VAL_SUMMER_MANUAL,
-    VAL_SUMMER_SCHEDULED,
+    VAL_SUMMER_PROGRAM,
     VAL_WINTER_MANUAL,
-    VAL_WINTER_SCHEDULED,
+    VAL_WINTER_PROGRAM,
     VAL_HEATING_ONLY,
     VAL_OFFLINE,
     VAL_MANUAL,
-    VAL_SCHEDULED,
+    VAL_PROGRAM,
     VALUE_TO_MODE,
     VALUE_TO_DHW_MODE,
     UNKNOWN_TEMP,
@@ -52,7 +53,7 @@ SUPPORTED_OPERATIONS_1 = [
 ]
 SUPPORTED_OPERATIONS_2 = [
     VAL_MANUAL,
-    VAL_SCHEDULED,
+    VAL_PROGRAM,
 ]
 
 _LOGGER = logging.getLogger(__name__)
@@ -164,17 +165,18 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def operation_list(self):
         """List of available operation modes."""
-        op_list = [VAL_OFF]
-        op_list.append(VAL_SUMMER)
-        op_list.append(VAL_WINTER)
-        try:
-            if MODE_TO_VALUE[VAL_HEATING_ONLY] in self._api._ariston_data["allowedModes"]:
-                op_list.append(VAL_HEATING_ONLY)
+        op_list = []
+        if self._api._device[CONF_CONTROL_FROM_WATER_HEATER] == True:
+            for item in SUPPORTED_OPERATIONS_1:
+                op_list.append(item)
+                if not "allowedModes" in self._api._ariston_data:
+                    op_list.remove(VAL_HEATING_ONLY)
+                elif not MODE_TO_VALUE[VAL_HEATING_ONLY] in self._api._ariston_data["allowedModes"]:
+                    op_list.remove(VAL_HEATING_ONLY)
+        if "dhwModeNotChangeable" in self._api._ariston_data:
             if self._api._ariston_data["dhwModeNotChangeable"] == False:
                 op_list.append(VAL_MANUAL)
-                op_list.append(VAL_SCHEDULED)
-        except:
-            pass
+                op_list.append(VAL_PROGRAM)
         return op_list
 
     @property
@@ -188,12 +190,12 @@ class AristonWaterHeater(WaterHeaterDevice):
                     if current_dhw_mode == VAL_MANUAL:
                         current_op = VAL_SUMMER_MANUAL
                     else:
-                        current_op = VAL_SUMMER_SCHEDULED
+                        current_op = VAL_SUMMER_PROGRAM
                 elif current_mode == VAL_WINTER:
                     if current_dhw_mode == VAL_MANUAL:
                         current_op = VAL_WINTER_MANUAL
                     else:
-                        current_op = VAL_WINTER_SCHEDULED
+                        current_op = VAL_WINTER_PROGRAM
                 elif current_mode == VAL_HEATING_ONLY:
                     current_op = VAL_HEATING_ONLY
                 else:
@@ -209,7 +211,7 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api.set_http_data({PARAM_DHW_SCHEDULED_COMFORT_TEMPERATURE: new_temperature})
+            self._api.set_http_data({PARAM_DHW_PROGRAM_COMFORT_TEMPERATURE: new_temperature})
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""
