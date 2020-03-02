@@ -79,6 +79,8 @@ from .const import (
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
+VAL_UNKNOWN_TEMP = 0.0
+
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 SENSOR_SCAN_INTERVAL_SECS = 5
 
@@ -270,36 +272,40 @@ class AristonSensor(Entity):
 
             elif self._sensor_type == PARAM_DHW_STORAGE_TEMPERATURE:
                 try:
-                    self._state = self._api._ariston_data["dhwStorageTemp"]
                     if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwBoilerPresent"] != True:
-                        self._state = VAL_UNSUPPORTED
+                        self._state = VAL_UNKNOWN_TEMP
+                    else:
+                        self._state = self._api._ariston_data["dhwStorageTemp"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_OUTSIDE_TEMPERATURE:
                 try:
-                    self._state = self._api._ariston_data["outsideTemp"]
                     if self._state in UNKNOWN_TEMP:
-                        self._state = VAL_UNSUPPORTED
+                        self._state = VAL_UNKNOWN_TEMP
+                    else:
+                        self._state = self._api._ariston_data["outsideTemp"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_DHW_COMFORT_TEMPERATURE:
                 try:
-                    self._state = self._api._ariston_data["dhwTimeProgComfortTemp"]["value"]
                     if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:
-                        self._state = VAL_UNSUPPORTED
+                        self._state = VAL_UNKNOWN_TEMP
+                    else:
+                        self._state = self._api._ariston_data["dhwTimeProgComfortTemp"]["value"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_DHW_ECONOMY_TEMPERATURE:
                 try:
-                    self._state = self._api._ariston_data["dhwTimeProgEconomyTemp"]["value"]
                     if self._state in UNKNOWN_TEMP or self._api._ariston_data["dhwTimeProgSupported"] != True:
-                        self._state = VAL_UNSUPPORTED
+                        self._state = VAL_UNKNOWN_TEMP
+                    else:
+                        self._state = self._api._ariston_data["dhwTimeProgEconomyTemp"]["value"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass

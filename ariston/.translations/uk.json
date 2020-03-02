@@ -1,0 +1,20 @@
+{
+    "state": {
+        "always_active": "Завжди активнй",
+        "available": "Наявний",
+        "disabled": "Вимкнений",
+        "heating_only": "Лише опалення",
+        "intelligent": "Розумний",
+        "manual": "Ручний",
+        "unsupported": "Не підтримується",
+        "off": "Вимкнений",
+        "offline": "Недоступний",
+        "program": "Програмований",
+        "summer": "Літо",
+        "time_based": "Згідно з графіком",
+        "unknown": "Невідомий",
+        "winter": "Зима"
+    },
+    "winter": "Зима"
+
+}

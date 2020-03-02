@@ -125,8 +125,8 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_MAX_RETRIES, default=DEFAULT_MAX_RETRIES): vol.All(int, vol.Range(min=0, max=65535)),
         vol.Optional(CONF_SWITCHES): vol.All(cv.ensure_list, [vol.In(SWITCHES)]),
         vol.Optional(CONF_STORE_CONFIG_FILES, default=False): cv.boolean,
-        vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=True): cv.boolean,
-        vol.Optional(CONF_HVAC_OFF_PRESENT, default=True): cv.boolean,
+        vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=False): cv.boolean,
+        vol.Optional(CONF_HVAC_OFF_PRESENT, default=False): cv.boolean,
     }
 )
 

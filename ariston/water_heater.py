@@ -19,7 +19,6 @@ from .const import (
     CONF_CONTROL_FROM_WATER_HEATER,
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
-    PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_COMFORT_TEMPERATURE,
     PARAM_MODE,
     VAL_OFF,
@@ -45,6 +44,8 @@ DEFAULT_TEMP = 0.0
 STATE_SCAN_INTERVAL_SECS = 10
 
 SUPPORT_FLAGS_HEATER = (SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE)
+SUPPORT_FLAGS_HEATER_NO_OP = (SUPPORT_TARGET_TEMPERATURE)
+
 SUPPORTED_OPERATIONS_1 = [
     VAL_OFF,
     VAL_SUMMER,
@@ -108,7 +109,12 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_FLAGS_HEATER
+        if self._api._device[CONF_CONTROL_FROM_WATER_HEATER]:
+            return SUPPORT_FLAGS_HEATER
+        elif "dhwModeNotChangeable" in self._api._ariston_data:
+            if self._api._ariston_data["dhwModeNotChangeable"] == False:
+                return SUPPORT_FLAGS_HEATER
+        return SUPPORT_FLAGS_HEATER_NO_OP
 
     @property
     def current_temperature(self):
@@ -166,7 +172,7 @@ class AristonWaterHeater(WaterHeaterDevice):
     def operation_list(self):
         """List of available operation modes."""
         op_list = []
-        if self._api._device[CONF_CONTROL_FROM_WATER_HEATER] == True:
+        if self._api._device[CONF_CONTROL_FROM_WATER_HEATER]:
             for item in SUPPORTED_OPERATIONS_1:
                 op_list.append(item)
             if not "allowedModes" in self._api._ariston_data:
