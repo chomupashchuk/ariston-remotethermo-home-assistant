@@ -1,0 +1,18 @@
+{
+    "state": {
+        "always_active": "Zawsze aktywny",
+        "available": "Dostępny",
+        "disabled": "Wyłączony",
+        "heating_only": "Tylko ogrzewanie",
+        "intelligent": "Rozumny",
+        "manual": "Ręczne",
+        "off": "Wyłączony",
+        "offline": "Offline",
+        "program": "Program",
+        "summer": "Lato",
+        "time_based": "Na podstawie czasu",
+        "unknown": "Niewiadomy",
+        "unsupported": "Nieobsługiwany",
+        "winter": "Zima"
+    }
+}

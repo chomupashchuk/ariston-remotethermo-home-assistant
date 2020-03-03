@@ -80,7 +80,7 @@ class AristonThermostat(ClimateDevice):
         self._api = device.api
         try:
             lang = self._api._device[CONF_LOCALIZATION]
-            with open(LANG_LOCATION + lang + '.json') as translation_file:
+            with open(LANG_LOCATION + 'backend.' + lang + '.json') as translation_file:
                 self._preset_translate = json.load(translation_file)["climate_preset"]
         except:
             self._preset_translate = {}

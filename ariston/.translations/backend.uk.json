@@ -7,26 +7,12 @@
         "summer": "літо",
         "winter": "зима"
     },
-    "state": {
-        "always_active": "Завжди активнй",
-        "available": "Наявний",
-        "disabled": "Вимкнений",
-        "heating_only": "Лише опалення",
-        "intelligent": "Розумний",
-        "manual": "Ручний",
-        "off": "Вимкнений",
-        "offline": "Недоступний",
-        "program": "Програмований",
-        "summer": "Літо",
-        "time_based": "Згідно з графіком",
-        "unknown": "Невідомий",
-        "unsupported": "Не підтримується",
-        "winter": "Зима"
-    },
     "water_heater_operation": {
         "heating_only": "лише опалення",
+        "manual": "ручний",
         "off": "вимкнено",
         "offline": "недоступно",
+        "program": "програмований",
         "summer": "літо",
         "summer_manual": "літо ручний",
         "summer_program": "літо програмний",
