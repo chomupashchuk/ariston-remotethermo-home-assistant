@@ -144,5 +144,5 @@ ariston:
 service: ariston.set_data
 data:
     entity_id: 'climate.ariston'
-    ch_set_temperature: 20.5
+    ch_comfort_temperature: 20.5
 ```
