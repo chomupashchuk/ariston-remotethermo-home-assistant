@@ -1,6 +1,7 @@
 """Support for Ariston water heaters."""
 import logging
 from datetime import timedelta
+import json
 
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
@@ -17,6 +18,8 @@ from .const import (
     DATA_ARISTON,
     DEVICES,
     CONF_CONTROL_FROM_WATER_HEATER,
+    CONF_LOCALIZATION,
+    LANG_LOCATION,
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
     PARAM_DHW_COMFORT_TEMPERATURE,
@@ -80,6 +83,13 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Initialize the thermostat."""
         self._name = name
         self._api = device.api
+        try:
+            lang = self._api._device[CONF_LOCALIZATION]
+            with open(LANG_LOCATION + lang + '.json') as translation_file:
+                self._operations_translate = json.load(translation_file)["water_heater_operation"]
+        except:
+            self._operations_translate = {}
+            pass
 
     @property
     def name(self):
@@ -183,6 +193,10 @@ class AristonWaterHeater(WaterHeaterDevice):
             if self._api._ariston_data["dhwModeNotChangeable"] == False:
                 op_list.append(VAL_MANUAL)
                 op_list.append(VAL_PROGRAM)
+        for pos, item in enumerate(op_list):
+            if item in self._operations_translate:
+                # translate operation in operation list
+                op_list[pos] = self._operations_translate[item]
         return op_list
 
     @property
@@ -211,6 +225,9 @@ class AristonWaterHeater(WaterHeaterDevice):
         except:
             current_op = VAL_OFFLINE
             pass
+        if current_op in self._operations_translate:
+            # translate current operation
+            current_op = self._operations_translate[current_op]
         return current_op
 
     def set_temperature(self, **kwargs):
@@ -221,6 +238,11 @@ class AristonWaterHeater(WaterHeaterDevice):
 
     def set_operation_mode(self, operation_mode):
         """Set operation mode."""
+        for item in self._operations_translate:
+            if self._operations_translate[item] == operation_mode:
+                # translate operation back to system format
+                operation_mode = item
+                break
         if operation_mode in SUPPORTED_OPERATIONS_1:
             self._api.set_http_data({PARAM_MODE: operation_mode})
         elif operation_mode in SUPPORTED_OPERATIONS_2:

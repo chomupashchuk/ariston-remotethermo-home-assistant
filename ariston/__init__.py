@@ -44,6 +44,7 @@ from .const import (
     CONF_MAX_RETRIES,
     CONF_STORE_CONFIG_FILES,
     CONF_CONTROL_FROM_WATER_HEATER,
+    CONF_LOCALIZATION,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -68,10 +69,13 @@ from .const import (
     PARAM_STRING_TO_VALUE,
     VAL_WINTER,
     VAL_SUMMER,
+    VAL_HEATING_ONLY,
     VAL_OFF,
     VAL_MANUAL,
     VAL_PROGRAM,
     WATER_HEATERS,
+    LANG_EN,
+    LANG_LIST,
 )
 from .exceptions import CommError, LoginError, AristonError
 from .helpers import service_signal
@@ -121,12 +125,13 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_BINARY_SENSORS): vol.All(cv.ensure_list, [vol.In(BINARY_SENSORS)]),
         vol.Optional(CONF_SENSORS): vol.All(cv.ensure_list, [vol.In(SENSORS)]),
         vol.Optional(CONF_HVAC_OFF, default=DEFAULT_HVAC): vol.In([VAL_OFF, VAL_SUMMER]),
-        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In([VAL_WINTER, VAL_SUMMER]),
+        vol.Optional(CONF_POWER_ON, default=DEFAULT_POWER_ON): vol.In([VAL_WINTER, VAL_SUMMER, VAL_HEATING_ONLY]),
         vol.Optional(CONF_MAX_RETRIES, default=DEFAULT_MAX_RETRIES): vol.All(int, vol.Range(min=0, max=65535)),
         vol.Optional(CONF_SWITCHES): vol.All(cv.ensure_list, [vol.In(SWITCHES)]),
         vol.Optional(CONF_STORE_CONFIG_FILES, default=False): cv.boolean,
         vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=False): cv.boolean,
         vol.Optional(CONF_HVAC_OFF_PRESENT, default=False): cv.boolean,
+        vol.Optional(CONF_LOCALIZATION, default=LANG_EN): vol.In(LANG_LIST),
     }
 )
 
@@ -1283,7 +1288,8 @@ def setup(hass, config):
 
                         data = call.data.get(PARAM_CH_COMFORT_TEMPERATURE, "")
                         if data != "":
-                            parameter_list[PARAM_CH_COMFORT_TEMPERATURE] = data
+                            # handle comfort temperature via different request
+                            parameter_list[PARAM_CH_SET_TEMPERATURE] = data
 
                         data = call.data.get(PARAM_CH_ECONOMY_TEMPERATURE, "")
                         if data != "":

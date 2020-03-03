@@ -5,7 +5,7 @@ set_data:
       description: "(Mandatory) Climate 'enity_id' for Ariston heater"
       example: climate.ariston
     mode:
-      description: "(Optional) General mode: 'winter' or 'summer' or 'off' or 'heating only'. Values depend on model."
+      description: "(Optional) General mode: 'winter' or 'summer' or 'off' or 'heating_only'. Values depend on model."
       example: winter
     ch_mode:
       description: "(Optional) CH mode: 'manual' or 'program'."
@@ -20,7 +20,7 @@ set_data:
       description: "(Optional) DHW mode: 'manual' or 'program'. Support depends on model."
       example: manual
     dhw_comfort_function:
-      description: "(Optional) DHW Comfort Function: 'disabled' or 'time based' or 'always active'"
+      description: "(Optional) DHW Comfort Function: 'disabled' or 'time_based' or 'always_active'"
       example: 'disabled'
     dhw_comfort_temperature:
       description: "(Optional) Set DHW Comfort temperature in C in steps of '1.0'. Value range depends on model."

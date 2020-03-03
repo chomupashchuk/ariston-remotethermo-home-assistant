@@ -33,7 +33,7 @@ BINARY_SENSOR_HOLIDAY_MODE = "Holiday Mode"
 BINARY_SENSOR_ONLINE = "Online"
 BINARY_SENSOR_FLAME = "Flame"
 BINARY_SENSOR_HEAT_PUMP = "Heat Pump"
-BINARY_SENSOR_CHANGING_DATA = "Changing Data via Home Assistant"
+BINARY_SENSOR_CHANGING_DATA = "Changing Data"
 BINARY_SENSOR_INTERNET_TIME = "Internet Time"
 BINARY_SENSOR_INTERNET_WEATHER = "Internet Weather"
 
@@ -57,9 +57,12 @@ VAL_DISABLED = "disabled"
 VAL_TIME_BASED = "time_based"
 VAL_ALWAYS_ACTIVE = "always_active"
 
+LANG_UK = "uk"
+LANG_EN = "en"
+LANG_PL = "pl"
+LANG_LIST = [LANG_UK, LANG_EN, LANG_PL]
+LANG_LOCATION = "/config/custom_components/ariston/.translations/"
 
-
-# From here on data should not be changed
 DOMAIN = "ariston"
 DATA_ARISTON = DOMAIN
 DEVICES = "devices"
@@ -133,6 +136,7 @@ CONF_MAX_RETRIES = "max_retries"
 CONF_STORE_CONFIG_FILES = "store_config_files"
 CONF_CONTROL_FROM_WATER_HEATER = "control_from_water_heater"
 CONF_HVAC_OFF_PRESENT = "hvac_off_present"
+CONF_LOCALIZATION = "localization"
 
 MODE_TO_VALUE = {VAL_WINTER: 1, VAL_SUMMER: 0, VAL_OFF: 5, VAL_HEATING_ONLY: 2}
 VALUE_TO_MODE = {1: VAL_WINTER, 0: VAL_SUMMER, 5: VAL_OFF, 2: VAL_HEATING_ONLY}

@@ -96,11 +96,11 @@ class AristonSwitch(SwitchDevice):
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
-        if self._switch_type == POWER:
-            if self._api._device[CONF_POWER_ON].lower() == VAL_SUMMER.lower():
-                self._api._set_http_data({PARAM_MODE: VAL_SUMMER})
-            elif self._api._device[CONF_POWER_ON].lower() == VAL_WINTER.lower():
-                self._api._set_http_data({PARAM_MODE: VAL_WINTER})
+        try:
+            if self._switch_type == POWER:
+                self._api._set_http_data({PARAM_MODE: self._api._device[CONF_POWER_ON]})
+        except:
+            pass
 
     def turn_off(self, **kwargs):
         """Turn the device off."""

@@ -3,6 +3,7 @@ Adds support for the Ariston Boiler
 """
 import logging
 from datetime import timedelta
+import json
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
@@ -24,6 +25,8 @@ from homeassistant.const import (
 from .const import (
     CONF_HVAC_OFF,
     CONF_HVAC_OFF_PRESENT,
+    CONF_LOCALIZATION,
+    LANG_LOCATION,
     DATA_ARISTON,
     DEVICES,
     PARAM_CH_MODE,
@@ -75,6 +78,13 @@ class AristonThermostat(ClimateDevice):
         """Initialize the thermostat."""
         self._name = name
         self._api = device.api
+        try:
+            lang = self._api._device[CONF_LOCALIZATION]
+            with open(LANG_LOCATION + lang + '.json') as translation_file:
+                self._preset_translate = json.load(translation_file)["climate_preset"]
+        except:
+            self._preset_translate = {}
+            pass
 
     @property
     def icon(self):
@@ -199,6 +209,9 @@ class AristonThermostat(ClimateDevice):
         except:
             curr_preset_mode = VAL_OFFLINE
             pass
+        if curr_preset_mode in self._preset_translate:
+            # translate current operation
+            curr_preset_mode = self._preset_translate[curr_preset_mode]
         return curr_preset_mode
 
     @property
@@ -213,6 +226,10 @@ class AristonThermostat(ClimateDevice):
                     pass
         except:
             pass
+        for pos, item in enumerate(all_presets):
+            if item in self._preset_translate:
+                # translate preset in preset list
+                all_presets[pos] = self._preset_translate[item]
         return all_presets
 
     @property
@@ -244,6 +261,11 @@ class AristonThermostat(ClimateDevice):
 
     def set_preset_mode(self, preset_mode):
         """Set new target hvac mode."""
+        for item in self._preset_translate:
+            if self._preset_translate[item] == preset_mode:
+                # translate operation back to system format
+                preset_mode = item
+                break
         if preset_mode in SUPPORTED_PRESETS:
             self._api.set_http_data({PARAM_MODE: preset_mode})
 
