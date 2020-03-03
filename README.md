@@ -136,8 +136,8 @@ ariston:
 `ariston.set_data` - sets data in the boiler. Uses `max_retries` attribute from configuration.
 
 ### Service attributes:
-`entity_id` - **mandatory** entity of Ariston `climate`.
-for the rest of data please see `Developer Tools` tab `Services` within Home Assistant and select `ariston.set_data`. You may also directly read `services.yaml` within the `ariston` folder.
+- `entity_id` - **mandatory** entity of Ariston `climate`.
+- for the rest of attributes please see `Developer Tools` tab `Services` within Home Assistant and select `ariston.set_data`. Or you may also directly read `services.yaml` within the `ariston` folder.
 
 ### Service use example
 ```
