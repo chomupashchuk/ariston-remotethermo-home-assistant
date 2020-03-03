@@ -23,7 +23,7 @@ All additional attributes are described in **Integration attributes**
 Localizations are located in corresponding `.json` file within `.translations` folder.
 Localization consists of two main parts:
   - Frontend translation (within corresponding `sensor.__.json` file), which works only with sensors due to functionality limitations. Change of frontend language automatically changes displayed value in frontend.
-  - Backend translation (objects within `__.json` file), which forces translated values to be used during components initilization for `climate` (preset) and `water_heater` (operation). Change of language can only be changed in `configuration.yaml` and is applied during Home Assistant start.
+  - Backend translation (objects within `backend.__.json` file), which forces translated values to be used during components initilization for `climate` (preset) and `water_heater` (operation). Change of language can only be changed in `configuration.yaml` and is applied during Home Assistant start.
 
 **Supported localizations**:
   - `en` - English (default)
