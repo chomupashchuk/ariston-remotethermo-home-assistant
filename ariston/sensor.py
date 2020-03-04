@@ -80,6 +80,7 @@ from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
 VAL_UNKNOWN_TEMP = 0.0
+DEFAULT_ICON = "default_icon"
 
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 SENSOR_SCAN_INTERVAL_SECS = 5
@@ -90,33 +91,33 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sensor types are defined like: Name, units, icon
 SENSORS = {
-    PARAM_CH_ACCOUNT_GAS: [SENSOR_CH_ACCOUNT_GAS, 'kWh', "mdi:cash"],
-    PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_CH_MODE: [SENSOR_CH_MODE, None, "mdi:hand"],
-    PARAM_CH_SET_TEMPERATURE: [SENSOR_CH_SET_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_CH_PROGRAM: [SENSOR_CH_PROGRAM, None, "mdi:calendar-month"],
-    PARAM_CH_COMFORT_TEMPERATURE: [SENSOR_CH_COMFORT_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_DHW_ACCOUNT_GAS: [SENSOR_DHW_ACCOUNT_GAS, 'kWh', "mdi:cash"],
-    PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, "mdi:water-pump"],
-    PARAM_DHW_SET_TEMPERATURE: [SENSOR_DHW_SET_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_DHW_STORAGE_TEMPERATURE: [SENSOR_DHW_STORAGE_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_DHW_COMFORT_TEMPERATURE: [SENSOR_DHW_COMFORT_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_DHW_ECONOMY_TEMPERATURE: [SENSOR_DHW_ECONOMY_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_DHW_MODE: [SENSOR_DHW_MODE, None, "mdi:hand"],
-    PARAM_ERRORS: [SENSOR_ERRORS, None, "mdi:alert-outline"],
-    PARAM_HEATING_LAST_24H: [SENSOR_HEATING_LAST_24H, 'kWh', "mdi:cash"],
-    PARAM_HEATING_LAST_7d: [SENSOR_HEATING_LAST_7d, 'kWh', "mdi:cash"],
-    PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', "mdi:cash"],
-    PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', "mdi:cash"],
-    PARAM_MODE: [SENSOR_MODE, None, "mdi:water-boiler"],
-    PARAM_OUTSIDE_TEMPERATURE: [SENSOR_OUTSIDE_TEMPERATURE, '°C', "mdi:thermometer"],
-    PARAM_SIGNAL_STRENGTH: [SENSOR_SIGNAL_STRENGTH, '%', "mdi:signal"],
-    PARAM_WATER_LAST_24H: [SENSOR_WATER_LAST_24H, 'kWh', "mdi:cash"],
-    PARAM_WATER_LAST_7D: [SENSOR_WATER_LAST_7D, 'kWh', "mdi:cash"],
-    PARAM_WATER_LAST_30D: [SENSOR_WATER_LAST_30D, 'kWh', "mdi:cash"],
-    PARAM_WATER_LAST_365D: [SENSOR_WATER_LAST_365D, 'kWh', "mdi:cash"],
+    PARAM_CH_ACCOUNT_GAS: [SENSOR_CH_ACCOUNT_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_CH_MODE: [SENSOR_CH_MODE, None, {DEFAULT_ICON: "mdi:hand"}],
+    PARAM_CH_SET_TEMPERATURE: [SENSOR_CH_SET_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_CH_PROGRAM: [SENSOR_CH_PROGRAM, None, {DEFAULT_ICON: "mdi:calendar-month"}],
+    PARAM_CH_COMFORT_TEMPERATURE: [SENSOR_CH_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_DHW_ACCOUNT_GAS: [SENSOR_DHW_ACCOUNT_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, {DEFAULT_ICON: "mdi:water-pump"}],
+    PARAM_DHW_SET_TEMPERATURE: [SENSOR_DHW_SET_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_DHW_STORAGE_TEMPERATURE: [SENSOR_DHW_STORAGE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_DHW_COMFORT_TEMPERATURE: [SENSOR_DHW_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_DHW_ECONOMY_TEMPERATURE: [SENSOR_DHW_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_DHW_MODE: [SENSOR_DHW_MODE, None, {DEFAULT_ICON: "mdi:hand"}],
+    PARAM_ERRORS: [SENSOR_ERRORS, None, {DEFAULT_ICON: "mdi:alert-outline", 0: "mdi:shield-check"}],
+    PARAM_HEATING_LAST_24H: [SENSOR_HEATING_LAST_24H, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_7d: [SENSOR_HEATING_LAST_7d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_MODE: [SENSOR_MODE, None, {DEFAULT_ICON: "mdi:water-boiler"}],
+    PARAM_OUTSIDE_TEMPERATURE: [SENSOR_OUTSIDE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_SIGNAL_STRENGTH: [SENSOR_SIGNAL_STRENGTH, '%', {DEFAULT_ICON: "mdi:signal"}],
+    PARAM_WATER_LAST_24H: [SENSOR_WATER_LAST_24H, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_7D: [SENSOR_WATER_LAST_7D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_30D: [SENSOR_WATER_LAST_30D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_365D: [SENSOR_WATER_LAST_365D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
 }
 
 
@@ -169,7 +170,12 @@ class AristonSensor(Entity):
     @property
     def icon(self):
         """Icon to use in the frontend, if any."""
-        return self._icon
+        if self._state in self._icon:
+            return self._icon[self._state]
+        elif DEFAULT_ICON in self._icon:
+            return self._icon[DEFAULT_ICON]
+        else:
+            return None
 
     @property
     def unit_of_measurement(self):
@@ -332,13 +338,13 @@ class AristonSensor(Entity):
                     pass
 
             elif self._sensor_type == PARAM_ERRORS:
+                self._state = VAL_UNKNOWN
                 try:
                     self._attrs = {}
                     self._state = self._api._ariston_error_data["count"]
                     for valid_error in self._api._ariston_error_data["result"]:
                         self._attrs[valid_error] = ""
                 except KeyError:
-                    self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_HEATING_LAST_24H:
