@@ -89,7 +89,7 @@ class AristonThermostat(ClimateDevice):
     @property
     def icon(self):
         """Return the name of the Climate device."""
-        return "mdi:water-boiler"
+        return "mdi:radiator"
 
     @property
     def name(self):
