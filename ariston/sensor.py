@@ -344,11 +344,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_HEATING_LAST_24H:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["daily"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["daily"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y2"]
                         sum = sum + item["y2"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -357,11 +355,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_WATER_LAST_24H:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["daily"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["daily"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y"]
                         sum = sum + item["y"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -370,11 +366,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_HEATING_LAST_7d:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["weekly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["weekly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y2"]
                         sum = sum + item["y2"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -383,11 +377,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_WATER_LAST_7D:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["weekly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["weekly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y"]
                         sum = sum + item["y"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -396,11 +388,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_HEATING_LAST_30d:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["monthly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["monthly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y2"]
                         sum = sum + item["y2"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -409,11 +399,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_WATER_LAST_30D:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["monthly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["monthly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y"]
                         sum = sum + item["y"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -422,11 +410,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_HEATING_LAST_365d:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["yearly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["yearly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y2"]
                         sum = sum + item["y2"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
@@ -435,11 +421,9 @@ class AristonSensor(Entity):
             elif self._sensor_type == PARAM_WATER_LAST_365D:
                 try:
                     sum = 0
-                    iteration = 1
-                    for item in self._api._ariston_gas_data["yearly"]["data"]:
+                    for iteration, item in enumerate(self._api._ariston_gas_data["yearly"]["data"], 1):
                         self._attrs["Period" + str(iteration)] = item["y"]
                         sum = sum + item["y"]
-                        iteration = iteration + 1
                     self._state = round(sum, 3)
                 except KeyError:
                     self._state = VAL_UNKNOWN
