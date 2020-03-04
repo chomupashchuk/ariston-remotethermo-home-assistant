@@ -99,7 +99,15 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def icon(self):
         """Return the name of the Water Heater device."""
-        return "mdi:water-pump"
+        try:
+            current_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
+        except:
+            current_mode = VAL_OFFLINE
+            pass
+        if current_mode in [VAL_SUMMER, VAL_WINTER]:
+            return "mdi:water-pump"
+        else:
+            return "mdi:water-pump-off"
 
     @property
     def unique_id(self) -> str:

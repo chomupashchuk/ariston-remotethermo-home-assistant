@@ -89,7 +89,15 @@ class AristonThermostat(ClimateDevice):
     @property
     def icon(self):
         """Return the name of the Climate device."""
-        return "mdi:radiator"
+        try:
+            current_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
+        except:
+            current_mode = VAL_OFFLINE
+            pass
+        if current_mode in [VAL_WINTER, VAL_HEATING_ONLY]:
+            return "mdi:radiator"
+        else:
+            return "mdi:radiator-off"
 
     @property
     def name(self):

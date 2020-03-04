@@ -105,7 +105,7 @@ SENSORS = {
     PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_MODE: [SENSOR_CH_MODE, None, {
-        DEFAULT_ICON: "mdi:radiator",
+        DEFAULT_ICON: "mdi:radiator-off",
         VAL_MANUAL: "mdi:hand",
         VAL_PROGRAM: "mdi:clock-outline",
         VAL_LEARNING: "mdi:mdi:head-cog-outline"
@@ -116,7 +116,7 @@ SENSORS = {
     PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
     PARAM_DHW_ACCOUNT_GAS: [SENSOR_DHW_ACCOUNT_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, {
-        DEFAULT_ICON: "mdi:water-pump",
+        DEFAULT_ICON: "mdi:water-pump-off",
         VAL_DISABLED: "mdi:water-pump-off",
         VAL_TIME_BASED: "mdi:clock-outline",
         VAL_ALWAYS_ACTIVE: "mdi:water-pump"
@@ -126,7 +126,7 @@ SENSORS = {
     PARAM_DHW_COMFORT_TEMPERATURE: [SENSOR_DHW_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
     PARAM_DHW_ECONOMY_TEMPERATURE: [SENSOR_DHW_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
     PARAM_DHW_MODE: [SENSOR_DHW_MODE, None, {
-        DEFAULT_ICON: "mdi:water-pump",
+        DEFAULT_ICON: "mdi:water-pump-off",
         VAL_MANUAL: "mdi:hand",
         VAL_PROGRAM: "mdi:clock-outline",
         VAL_UNSUPPORTED: "mdi:water-pump"
@@ -140,7 +140,7 @@ SENSORS = {
     PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_MODE: [SENSOR_MODE, None, {
-        DEFAULT_ICON: "mdi:cogs",
+        DEFAULT_ICON: "water-boiler-off",
         VAL_WINTER: "mdi:water-boiler",
         VAL_SUMMER: "mdi:water-pump",
         VAL_HEATING_ONLY: "mdi:mdi:radiator",
