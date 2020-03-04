@@ -108,7 +108,7 @@ SENSORS = {
         DEFAULT_ICON: "mdi:radiator",
         VAL_MANUAL: "mdi:hand",
         VAL_PROGRAM: "mdi:clock-outline",
-        VAL_LEARNING: "mdi:head-cog"
+        VAL_LEARNING: "mdi:mdi:head-cog-outline"
     }],
     PARAM_CH_SET_TEMPERATURE: [SENSOR_CH_SET_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_PROGRAM: [SENSOR_CH_PROGRAM, None, {DEFAULT_ICON: "mdi:calendar-month"}],
@@ -140,7 +140,7 @@ SENSORS = {
     PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_MODE: [SENSOR_MODE, None, {
-        DEFAULT_ICON: "mdi:water-boiler",
+        DEFAULT_ICON: "mdi:cogs",
         VAL_WINTER: "mdi:water-boiler",
         VAL_SUMMER: "mdi:water-pump",
         VAL_HEATING_ONLY: "mdi:mdi:radiator",
