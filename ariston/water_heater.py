@@ -213,7 +213,9 @@ class AristonWaterHeater(WaterHeaterDevice):
         try:
             current_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
             current_dhw_mode = VALUE_TO_DHW_MODE[self._api._ariston_data["dhwMode"]]
-            if self._api._ariston_data["dhwModeNotChangeable"] == False:
+            if not self._api._device[CONF_CONTROL_FROM_WATER_HEATER]:
+                current_op = current_dhw_mode
+            elif self._api._ariston_data["dhwModeNotChangeable"] == False:
                 if current_mode == VAL_SUMMER:
                     if current_dhw_mode == VAL_MANUAL:
                         current_op = VAL_SUMMER_MANUAL

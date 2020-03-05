@@ -1,23 +1,23 @@
 {
     "climate_preset": {
-        "heating_only": "лише опалення",
-        "holiday": "відпустка",
-        "off": "вимкнено",
-        "offline": "недоступно",
-        "summer": "літо",
-        "winter": "зима"
+        "heating_only": "Лише опалення",
+        "holiday": "Відпустка",
+        "off": "Вимкнено",
+        "offline": "Недоступно",
+        "summer": "Літо",
+        "winter": "Зима"
     },
     "water_heater_operation": {
-        "heating_only": "лише опалення",
-        "manual": "ручний",
-        "off": "вимкнено",
-        "offline": "недоступно",
-        "program": "програмований",
-        "summer": "літо",
-        "summer_manual": "літо ручний",
-        "summer_program": "літо програмний",
-        "winter": "зима",
-        "winter_manual": "зима ручний",
-        "winter_program": "зима програмний"
+        "heating_only": "Лише опалення",
+        "manual": "Ручний",
+        "off": "Вимкнено",
+        "offline": "Недоступно",
+        "program": "Програмований",
+        "summer": "Літо",
+        "summer_manual": "Літо ручний",
+        "summer_program": "Літо програмний",
+        "winter": "Зима",
+        "winter_manual": "Зима ручний",
+        "winter_program": "Зима програмний"
     }
 }

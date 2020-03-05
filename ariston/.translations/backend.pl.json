@@ -1,23 +1,23 @@
 {
     "climate_preset": {
-        "heating_only": "tylko ogrzewanie",
-        "holiday": "wakacje",
-        "off": "wyłączony",
-        "offline": "offline",
-        "summer": "lato",
-        "winter": "zima"
+        "heating_only": "Tylko ogrzewanie",
+        "holiday": "Wakacje",
+        "off": "Wyłączony",
+        "offline": "Offline",
+        "summer": "Lato",
+        "winter": "Zima"
     },
     "water_heater_operation": {
-        "heating_only": "tylko ogrzewanie",
-        "manual": "Ręczne",
-        "off": "wyłączony",
-        "offline": "offline",
-        "program": "Program",
-        "summer": "lato",
-        "summer_manual": "lato ręczne",
-        "summer_program": "lato program",
-        "winter": "zima",
-        "winter_manual": "zima ręczne",
-        "winter_program": "zima program"
+        "heating_only": "Tylko ogrzewanie",
+        "manual": "Ręczny",
+        "off": "Wyłączony",
+        "offline": "Offline",
+        "program": "Programowany",
+        "summer": "Lato",
+        "summer_manual": "Lato ręczny",
+        "summer_program": "lato programowany",
+        "winter": "Zima",
+        "winter_manual": "Zima ręczny",
+        "winter_program": "Zima programowany"
     }
 }

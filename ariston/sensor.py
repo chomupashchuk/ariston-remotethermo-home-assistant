@@ -1,6 +1,7 @@
 """Suppoort for Ariston sensors."""
 import logging
 from datetime import timedelta
+import os
 
 from homeassistant.const import CONF_NAME, CONF_SENSORS
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -91,6 +92,12 @@ from .helpers import log_update_error, service_signal
 
 VAL_UNKNOWN_TEMP = 0.0
 DEFAULT_ICON = "default_icon"
+MODE_TO_ICON = {
+    VAL_OFF: "ariston_off.png",
+    VAL_WINTER: "ariston_water_and_heating.png",
+    VAL_SUMMER: "ariston_water_only.png",
+    VAL_HEATING_ONLY: "ariston_heating_only.png"
+}
 
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 SENSOR_SCAN_INTERVAL_SECS = 5
@@ -210,6 +217,15 @@ class AristonSensor(Entity):
             return self._icon[DEFAULT_ICON]
         else:
             return None
+
+    @property
+    def entity_picture(self):
+        """Return the entity picture to use in the frontend, if any."""
+        if self._sensor_type == PARAM_MODE:
+            if self._state in MODE_TO_ICON:
+                if os.path.isfile('/config/www/icons/' + MODE_TO_ICON[self._state]):
+                    return "/local/icons/" + MODE_TO_ICON[self._state]
+        return None
 
     @property
     def unit_of_measurement(self):

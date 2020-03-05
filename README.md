@@ -30,6 +30,9 @@ Localization consists of two main parts:
   - `uk` - Ukrainian
   - `pl` - Polish
 
+## Custom icons for mode status
+Store `icons` folder contents within `\config\www\icons`.
+
 ### Integration attributes
   - `username` - **mandatory** user name used in https://www.ariston-net.remotethermo.com
   - `password` - **mandatory** password used in https://www.ariston-net.remotethermo.com
