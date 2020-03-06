@@ -30,8 +30,8 @@ Localization consists of two main parts:
   - `uk` - Ukrainian
   - `pl` - Polish
 
-## Custom icons for mode status
-Store `icons` folder contents within `\config\www\icons`.
+## Custom icons for mode sensor
+Store contents of `icons` folder in `\config\www\icons` folder. Since builtin icons do not have similar representation as in Ariston app, this is an option to partly reflect the application view.
 
 ### Integration attributes
   - `username` - **mandatory** user name used in https://www.ariston-net.remotethermo.com

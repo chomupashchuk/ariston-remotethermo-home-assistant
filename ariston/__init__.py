@@ -62,6 +62,7 @@ from .const import (
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_COMFORT_TEMPERATURE,
     PARAM_DHW_ECONOMY_TEMPERATURE,
+    PARAM_DHW_STORAGE_TEMPERATURE,
     PARAM_CH_COMFORT_TEMPERATURE,
     PARAM_CH_ECONOMY_TEMPERATURE,
     PARAM_INTERNET_TIME,
@@ -115,6 +116,8 @@ HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + TIMER_SET_LOCK + 5
 HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_CH_MULTIPLY_TIME + TIMER_SET_LOCK + 5
 HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_OTHER_MULTIPLY_TIME + TIMER_SET_LOCK + 5
 
+UNKNOWN_TEMP = 0
+
 _LOGGER = logging.getLogger(__name__)
 
 ARISTON_SCHEMA = vol.Schema(
@@ -135,15 +138,18 @@ ARISTON_SCHEMA = vol.Schema(
     }
 )
 
+
 def _has_unique_names(devices):
     names = [device[CONF_NAME] for device in devices]
     vol.Schema(vol.Unique())(names)
     return devices
 
+
 CONFIG_SCHEMA = vol.Schema(
     {DOMAIN: vol.All(cv.ensure_list, [ARISTON_SCHEMA], _has_unique_names)},
     extra=vol.ALLOW_EXTRA,
 )
+
 
 def _change_to_24h_format(time_str_12h=""):
     """Convert to 24H format if in 12H format"""
@@ -171,6 +177,7 @@ def _change_to_24h_format(time_str_12h=""):
         time_str_24h = DEFAULT_TIME
         pass
     return time_str_24h
+
 
 class AristonChecker():
     """Ariston checker"""
@@ -260,13 +267,21 @@ class AristonChecker():
 
     def _store_main_data(self, received_data={}, request_type=""):
         """Store received dictionary"""
+        dhw_temp = {}
         try:
             allowed_modes = self._ariston_data["allowedModes"]
-            allowed_ch_modes = allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
+            allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
+            dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = self._ariston_data["dhwStorageTemp"]
+            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["value"]
+            dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["value"]
         except:
             allowed_modes = []
             allowed_ch_modes = []
+            dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = UNKNOWN_TEMP
+            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+            dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
             pass
+        log_temp_zero = False
         try:
             self._ariston_data = copy.deepcopy(received_data)
         except:
@@ -285,9 +300,25 @@ class AristonChecker():
                     self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
                 else:
                     self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+            if self._ariston_data["dhwStorageTemp"] == UNKNOWN_TEMP:
+                if dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
+                    log_temp_zero = True
+            if self._ariston_data["dhwTimeProgComfortTemp"]["value"] == UNKNOWN_TEMP:
+                if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
+                    log_temp_zero = True
+            if self._ariston_data["dhwTimeProgEconomyTemp"]["value"] == UNKNOWN_TEMP:
+                if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
+                    log_temp_zero = True
+
             if self._store_file:
                 with open('/config/data_' + self._name + request_type + '_main.json', 'w') as ariston_fetched:
                     json.dump(self._ariston_data, ariston_fetched)
+                if log_temp_zero:
+                    with open('/config/data_' + self._name + request_type + '_main_zero.json', 'w') as ariston_fetched:
+                        json.dump(self._ariston_data, ariston_fetched)
+                    with open('/config/data_' + self._name + request_type + '_main_non_zero.json',
+                              'w') as ariston_fetched:
+                        json.dump(dhw_temp, ariston_fetched)
         except:
             self._ariston_data["allowedModes"] = DEFAULT_MODES
             self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
@@ -479,6 +510,21 @@ class AristonChecker():
                             if self._store_file:
                                 with open('/config/data_' + self._name + '_params.json', 'w') as ariston_fetched:
                                     json.dump(resp.json(), ariston_fetched)
+
+                            for param_item in self._ariston_other_data:
+                                try:
+                                    if param_item["id"] == ARISTON_DHW_TIME_PROG_COMFORT and param_item[
+                                        "value"] != UNKNOWN_TEMP:
+                                        if "dhwTimeProgComfortTemp" in self._ariston_data and "value" in \
+                                                self._ariston_data["dhwTimeProgComfortTemp"]:
+                                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = param_item["value"]
+                                    elif param_item["id"] == ARISTON_DHW_TIME_PROG_ECONOMY and param_item[
+                                        "value"] != UNKNOWN_TEMP:
+                                        if "dhwTimeProgEconomyTemp" in self._ariston_data and "value" in \
+                                                self._ariston_data["dhwTimeProgEconomyTemp"]:
+                                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
+                                except:
+                                    continue
                     except:
                         _LOGGER.warning("%s Problem reading other data", self)
                         raise CommError
@@ -793,8 +839,8 @@ class AristonChecker():
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
 
-                    elif ch_data_changed and ((
-                                                      self._set_ch_retry == 0 and main_data_changed) or self._set_ch_retry < self._set_max_retries):
+                    elif ch_data_changed and ((self._set_ch_retry == 0 and main_data_changed) or
+                                              self._set_ch_retry < self._set_max_retries):
 
                         # retry again after enough time
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_CH)
@@ -1138,7 +1184,8 @@ class AristonChecker():
                             self._set_param[PARAM_INTERNET_WEATHER] = PARAM_STRING_TO_VALUE[wanted_internet_weather]
                             _LOGGER.info('%s New Internet weather is %s', self, wanted_internet_weather)
                         else:
-                            _LOGGER.warning('%s Unknown or unsupported Internet weather: %s', self, wanted_internet_weather)
+                            _LOGGER.warning('%s Unknown or unsupported Internet weather: %s', self,
+                                            wanted_internet_weather)
                     except:
                         _LOGGER.warning('%s Unknown or unsupported Internet weather or key error: %s', self,
                                         wanted_internet_weather)
