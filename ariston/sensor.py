@@ -145,7 +145,7 @@ SENSORS = {
     PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_MODE: [SENSOR_MODE, None, {
-        DEFAULT_ICON: "water-boiler-off",
+        DEFAULT_ICON: "mdi:water-boiler-off",
         VAL_WINTER: "mdi:water-boiler",
         VAL_SUMMER: "mdi:water-pump",
         VAL_HEATING_ONLY: "mdi:mdi:radiator",

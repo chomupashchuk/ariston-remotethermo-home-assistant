@@ -90,33 +90,41 @@ from .switch import SWITCHES
 """HTTP_TIMEOUT_SET is timeout to set data"""
 
 ARISTON_URL = "https://www.ariston-net.remotethermo.com"
-DEFAULT_HVAC = "summer"
-DEFAULT_POWER_ON = "summer"
+DEFAULT_HVAC = VAL_SUMMER
+DEFAULT_POWER_ON = VAL_SUMMER
 DEFAULT_NAME = "Ariston"
 DEFAULT_MAX_RETRIES = 1
 DEFAULT_TIME = "00:00"
+DEFAULT_MODES = [0, 1, 5]
+DEFAULT_CH_MODES = [2, 3]
+MAX_ERRORS = 3
+MAX_ERRORS_TIMER_EXTEND = 2
 HTTP_RETRY_INTERVAL = 60
 HTTP_RETRY_INTERVAL_DOWN = 90
-TIMER_SET_LOCK = 25
+HTTP_RETRY_GAS_MULTIPLY = 11
+HTTP_RETRY_ERROR_MULTIPLY = 5
+HTTP_RETRY_CH_MULTIPLY = 3
+HTTP_RETRY_OTHER_MULTIPLY = 4
+HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMEOUT_LOGIN = 3
 HTTP_TIMEOUT_GET = 15
+HTTP_TIMEOUT_GET_OTHERS = 7
 HTTP_TIMEOUT_SET = 15
 HTTP_TIMEOUT_SET_CH = 10
 HTTP_TIMEOUT_SET_PARAM = 10
-HTTP_ADDITIONAL_GET = 7
-MAX_ERRORS = 3
-MAX_ERRORS_TIMER_EXTEND = 2
-HTTP_GAS_WATER_MULTIPLY_TIME = 10
-HTTP_ERROR_MULTIPLY_TIME = 3
-HTTP_CH_MULTIPLY_TIME = 3
-HTTP_OTHER_MULTIPLY_TIME = 5
-DEFAULT_MODES = [0, 1, 5]
-DEFAULT_CH_MODES = [2, 3]
-HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + TIMER_SET_LOCK + 5
-HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_CH_MULTIPLY_TIME + TIMER_SET_LOCK + 5
-HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_OTHER_MULTIPLY_TIME + TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + HTTP_TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_CH_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_OTHER_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
 
 UNKNOWN_TEMP = 0
+REQUEST_GET_MAIN = "_get_main"
+REQUEST_GET_CH = "_get_ch"
+REQUEST_GET_ERROR = "_get_error"
+REQUEST_GET_GAS = "_get_gas"
+REQUEST_GET_OTHER = "_get_param"
+REQUEST_SET_MAIN = "_set_main"
+REQUEST_SET_CH = "_set_ch"
+REQUEST_SET_OTHER = "_set_param"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -179,6 +187,27 @@ def _change_to_24h_format(time_str_12h=""):
     return time_str_24h
 
 
+def _json_validator(data):
+    try:
+        if isinstance(data, dict):
+            if data == {}:
+                return False
+            else:
+                return True
+        if isinstance(data, list):
+            if data == []:
+                return False
+            else:
+                for item in data:
+                    if not isinstance(item, dict):
+                        return False
+                return True
+        else:
+            return False
+    except:
+        return False
+
+
 class AristonChecker():
     """Ariston checker"""
 
@@ -192,12 +221,18 @@ class AristonChecker():
         self._data_lock = threading.Lock()
         self._device = device
         self._errors = 0
-        self._get_time_start = 0
-        self._get_time_end = 0
-        self._get_time_start_ch = 0
-        self._get_time_end_ch = 0
-        self._get_time_start_param = 0
-        self._get_time_end_param = 0
+        self._get_time_start = {REQUEST_GET_MAIN: 0,
+                                REQUEST_GET_CH: 0,
+                                REQUEST_GET_ERROR: 0,
+                                REQUEST_GET_GAS: 0,
+                                REQUEST_GET_OTHER: 0
+                                }
+        self._get_time_end = {REQUEST_GET_MAIN: 0,
+                              REQUEST_GET_CH: 0,
+                              REQUEST_GET_ERROR: 0,
+                              REQUEST_GET_GAS: 0,
+                              REQUEST_GET_OTHER: 0
+                              }
         self._hass = hass
         self._init_available = False
         self._lock = threading.Lock()
@@ -206,7 +241,6 @@ class AristonChecker():
         self._password = password
         self._plant_id = ""
         self._plant_id_lock = threading.Lock()
-        self._retry_timeout = HTTP_RETRY_INTERVAL
         self._session = requests.Session()
         self._set_param = {}
         self._set_main_retry = 0
@@ -215,12 +249,18 @@ class AristonChecker():
         self._set_max_retries = retries
         self._set_new_data_pending = False
         self._set_scheduled = False
-        self._set_time_start = 0
-        self._set_time_end = 0
-        self._set_time_start_ch = 0
-        self._set_time_end_ch = 0
-        self._set_time_start_param = 0
-        self._set_time_end_param = 0
+        self._set_time_start = {REQUEST_GET_MAIN: 0,
+                                REQUEST_GET_CH: 0,
+                                REQUEST_GET_ERROR: 0,
+                                REQUEST_GET_GAS: 0,
+                                REQUEST_GET_OTHER: 0
+                                }
+        self._set_time_end = {REQUEST_GET_MAIN: 0,
+                              REQUEST_GET_CH: 0,
+                              REQUEST_GET_ERROR: 0,
+                              REQUEST_GET_GAS: 0,
+                              REQUEST_GET_OTHER: 0
+                              }
         self._store_file = store_file
         self._token_lock = threading.Lock()
         self._token = None
@@ -265,277 +305,268 @@ class AristonChecker():
                 _LOGGER.warning('%s Authentication login error', self)
                 raise LoginError
 
-    def _store_main_data(self, received_data={}, request_type=""):
+    def _store_data(self, resp, request_type=""):
         """Store received dictionary"""
-        dhw_temp = {}
-        try:
-            allowed_modes = self._ariston_data["allowedModes"]
-            allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
-            dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = self._ariston_data["dhwStorageTemp"]
-            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["value"]
-            dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["value"]
-        except:
-            allowed_modes = []
-            allowed_ch_modes = []
-            dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = UNKNOWN_TEMP
-            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
-            dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
-            pass
+        if resp.status_code != 200:
+            _LOGGER.warning('%s %s invalid reply code %s', self, request_type, resp.status_code)
+            raise CommError(error)
+        if not _json_validator(resp.json()):
+            _LOGGER.warning('%s %s No json detected', self, request_type)
+            raise CommError(error)
         log_temp_zero = False
-        try:
-            self._ariston_data = copy.deepcopy(received_data)
-        except:
-            with self._plant_id_lock:
-                self._login = False
-            _LOGGER.warning("%s Invalid data received, not JSON", self)
-            raise CommError
-        try:
-            if self._ariston_data["allowedModes"] == []:
-                if allowed_modes != []:
-                    self._ariston_data["allowedModes"] = allowed_modes
-                else:
-                    self._ariston_data["allowedModes"] = DEFAULT_MODES
-            if self._ariston_data["zone"]["mode"]["allowedOptions"] == []:
-                if allowed_ch_modes != []:
-                    self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
-                else:
-                    self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
-            if self._ariston_data["dhwStorageTemp"] == UNKNOWN_TEMP:
-                if dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
-                    log_temp_zero = True
-            if self._ariston_data["dhwTimeProgComfortTemp"]["value"] == UNKNOWN_TEMP:
-                if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
-                    log_temp_zero = True
-            if self._ariston_data["dhwTimeProgEconomyTemp"]["value"] == UNKNOWN_TEMP:
-                if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
-                    log_temp_zero = True
-
-            if self._store_file:
-                with open('/config/data_' + self._name + request_type + '_main.json', 'w') as ariston_fetched:
+        dhw_temp = {}
+        if request_type in [REQUEST_GET_MAIN, REQUEST_SET_MAIN]:
+            try:
+                allowed_modes = self._ariston_data["allowedModes"]
+                allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
+                dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = self._ariston_data["dhwStorageTemp"]
+                dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["value"]
+                dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["value"]
+            except:
+                allowed_modes = []
+                allowed_ch_modes = []
+                dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = UNKNOWN_TEMP
+                dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                pass
+            try:
+                self._ariston_data = copy.deepcopy(resp.json())
+            except:
+                with self._plant_id_lock:
+                    self._login = False
+                _LOGGER.warning("%s Invalid data received, not JSON", self)
+                raise CommError
+            try:
+                if self._ariston_data["allowedModes"] == []:
+                    if allowed_modes != []:
+                        self._ariston_data["allowedModes"] = allowed_modes
+                    else:
+                        self._ariston_data["allowedModes"] = DEFAULT_MODES
+                if self._ariston_data["zone"]["mode"]["allowedOptions"] == []:
+                    if allowed_ch_modes != []:
+                        self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
+                    else:
+                        self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+                if self._ariston_data["dhwStorageTemp"] == UNKNOWN_TEMP:
+                    if dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
+                        log_temp_zero = True
+                if self._ariston_data["dhwTimeProgComfortTemp"]["value"] == UNKNOWN_TEMP:
+                    if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
+                        log_temp_zero = True
+                if self._ariston_data["dhwTimeProgEconomyTemp"]["value"] == UNKNOWN_TEMP:
+                    if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
+                        log_temp_zero = True
+            except:
+                self._ariston_data["allowedModes"] = DEFAULT_MODES
+                self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+                raise CommError(error)
+        elif request_type == REQUEST_GET_CH:
+            self._ariston_ch_data = copy.deepcopy(resp.json())
+        elif request_type == REQUEST_GET_ERROR:
+            self._ariston_error_data = copy.deepcopy(resp.json())
+        elif request_type == REQUEST_GET_GAS:
+            self._ariston_gas_data = copy.deepcopy(resp.json())
+        elif request_type == REQUEST_GET_OTHER:
+            self._ariston_other_data = copy.deepcopy(resp.json())
+            for param_item in self._ariston_other_data:
+                try:
+                    # Copy latest DHW temperature
+                    if param_item["id"] == ARISTON_DHW_TIME_PROG_COMFORT and param_item["value"] != UNKNOWN_TEMP:
+                        if "dhwTimeProgComfortTemp" in self._ariston_data and "value" in \
+                                self._ariston_data["dhwTimeProgComfortTemp"]:
+                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = param_item["value"]
+                    elif param_item["id"] == ARISTON_DHW_TIME_PROG_ECONOMY and param_item["value"] != UNKNOWN_TEMP:
+                        if "dhwTimeProgEconomyTemp" in self._ariston_data and "value" in \
+                                self._ariston_data["dhwTimeProgEconomyTemp"]:
+                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
+                except:
+                    continue
+        self._get_time_end[request_type] = time.time()
+        if self._store_file:
+            with open('/config/data_' + self._name + request_type, 'w') as ariston_fetched:
+                json.dump(self._ariston_data, ariston_fetched)
+            if log_temp_zero:
+                with open('/config/data_' + self._name + request_type + '_zero.json', 'w') as ariston_fetched:
                     json.dump(self._ariston_data, ariston_fetched)
-                if log_temp_zero:
-                    with open('/config/data_' + self._name + request_type + '_main_zero.json', 'w') as ariston_fetched:
-                        json.dump(self._ariston_data, ariston_fetched)
-                    with open('/config/data_' + self._name + request_type + '_main_non_zero.json',
-                              'w') as ariston_fetched:
-                        json.dump(dhw_temp, ariston_fetched)
-        except:
-            self._ariston_data["allowedModes"] = DEFAULT_MODES
-            self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
-            raise
+                with open('/config/data_' + self._name + request_type + '_non_zero.json', 'w') as ariston_fetched:
+                    json.dump(dhw_temp, ariston_fetched)
 
-    def _get_http_data(self):
-        """Get Ariston data from http"""
+    def _get_http_data(self, request_type=""):
+        """Common fetching of http data"""
         self._login_session()
         if self._login and self._plant_id != "":
-            last_set_of_data = max(self._set_time_start, self._set_time_start_ch, self._set_time_start_param)
-            if time.time() - last_set_of_data > TIMER_SET_LOCK:
-                # give time to read new data
+            try:
+                last_set_of_data = _set_time_start[max(_set_time_start.keys(), key=(lambda k: _set_time_start[k]))]
+            except:
+                last_set_of_data = 0
+                pass
+            if time.time() - last_set_of_data > HTTP_TIMER_SET_LOCK:
+                # do not read immediately during set attempt
+                if request_type == REQUEST_GET_CH:
+                    url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
+                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                elif request_type == REQUEST_GET_ERROR:
+                    url_get = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
+                              '?$inlinecount=allpages&$skip=0&$top=100'
+                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                elif request_type == REQUEST_GET_GAS:
+                    url_get = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
+                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                elif request_type == REQUEST_GET_OTHER:
+                    ids_to_fetch = ",".join(map(str, ARISTON_PARAM_LIST))
+                    url_get = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
+                              '&umsys=si'
+                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                else:
+                    url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
+                    http_timeout = HTTP_TIMEOUT_GET
                 with self._data_lock:
                     try:
-                        url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
-                        self._get_time_start = time.time()
+                        self._get_time_start[request_type] = time.time()
                         resp = self._session.get(
-                            url,
+                            url_get,
                             auth=self._token,
-                            timeout=HTTP_TIMEOUT_GET,
+                            timeout=http_timeout,
                             verify=self._verify)
-                        if resp.status_code == 599:
-                            _LOGGER.warning("%s Code %s, data is %s", self, resp.status_code, resp.text)
-                            raise CommError
-                        elif resp.status_code == 500:
-                            with self._plant_id_lock:
-                                self._login = False
-                            _LOGGER.warning("%s Code %s, data is %s", self, resp.status_code, resp.text)
-                            raise CommError
-                        elif resp.status_code != 200:
-                            _LOGGER.warning("%s Unexpected reply %s", self, resp.status_code)
-                            raise CommError
                         resp.raise_for_status()
-                        # successful data fetching
-                        self._get_time_end = time.time()
-                    except requests.RequestException as error:
-                        _LOGGER.warning("%s Failed due to error: %r", self, error)
-                        raise CommError(error)
-                    _LOGGER.info("%s Query worked. Exit code: <%s>", self, resp.status_code)
-
-                    self._store_main_data(resp.json(), "_get")
+                        self._store_data(resp, request_type)
+                    except:
+                        _LOGGER.warning("%s %s Problem reading data", self, request_type)
+                        raise CommError
             else:
-                _LOGGER.debug("%s Setting data read restricted", self)
+                _LOGGER.debug("%s %s Still setting data, read restricted", self, request_type)
         else:
-            _LOGGER.warning("%s Not properly logged in to get data", self)
+            _LOGGER.warning("%s %s Not properly logged in to get the data", self, request_type)
             raise LoginError
+
+    def _get_main_data(self, dummy=None):
+        """Get Ariston main data from http"""
+        with self._data_lock:
+            if self._errors >= MAX_ERRORS_TIMER_EXTEND:
+                # give a little rest to the system
+                retry_in = HTTP_RETRY_INTERVAL_DOWN
+                _LOGGER.warning('%s Retrying in %s seconds', self, retry_in)
+            else:
+                retry_in = HTTP_RETRY_INTERVAL
+                _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
+            retry_time = dt_util.now() + timedelta(seconds=retry_in)
+            track_point_in_time(self._hass, self._get_main_data, retry_time)
+        try:
+            self._get_http_data(REQUEST_GET_MAIN)
+        except AristonError:
+            with self._lock:
+                was_online = self.available
+                self._errors += 1
+                _LOGGER.warning("%s errors: %i", self._name, self._errors)
+                offline = not self.available
+            if offline and was_online:
+                with self._plant_id_lock:
+                    self._login = False
+                _LOGGER.error("%s is offline: Too many errors", self._name)
+                dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
+            raise
+        with self._lock:
+            was_offline = not self.available
+            self._errors = 0
+            self._init_available = True
+        if was_offline:
+            _LOGGER.info("%s Ariston back online", self._name)
+            dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
 
     def _get_gas_water_data(self, dummy=None):
         """Get Ariston gas and water use data from http"""
         if self._errors >= MAX_ERRORS_TIMER_EXTEND:
             # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_GAS_WATER_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_GAS_MULTIPLY
         else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_GAS_WATER_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_GAS_MULTIPLY
         retry_time = dt_util.now() + timedelta(seconds=retry_in)
         track_point_in_time(self._hass, self._get_gas_water_data, retry_time)
-        self._login_session()
-        if self._login and self._plant_id != "":
-            last_set_of_data = max(self._set_time_start, self._set_time_start_ch, self._set_time_start_param)
-            if time.time() - last_set_of_data > TIMER_SET_LOCK:
-                with self._data_lock:
-                    # give time to read new data
-                    try:
-                        url = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
-                        resp = self._session.get(
-                            url,
-                            auth=self._token,
-                            timeout=HTTP_ADDITIONAL_GET,
-                            verify=self._verify)
-                        resp.raise_for_status()
-                        if resp.status_code == 200:
-                            self._ariston_gas_data = copy.deepcopy(resp.json())
-                            if self._store_file:
-                                with open('/config/data_' + self._name + '_gas.json', 'w') as ariston_fetched:
-                                    json.dump(resp.json(), ariston_fetched)
-                    except:
-                        _LOGGER.warning("%s Problem reading Gas and Water use data", self)
-                        raise CommError
-            else:
-                _LOGGER.debug("%s Setting data read restricted", self)
-        else:
-            _LOGGER.warning("%s Not properly logged in to get data", self)
-            raise LoginError
+        self._get_http_data(REQUEST_GET_GAS)
 
     def _get_error_data(self, dummy=None):
         """Get Ariston error data from http"""
         if self._errors >= MAX_ERRORS_TIMER_EXTEND:
             # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_ERROR_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_ERROR_MULTIPLY
         else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_ERROR_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_ERROR_MULTIPLY
         retry_time = dt_util.now() + timedelta(seconds=retry_in)
         track_point_in_time(self._hass, self._get_error_data, retry_time)
-        self._login_session()
-        if self._login and self._plant_id != "":
-            last_set_of_data = max(self._set_time_start, self._set_time_start_ch, self._set_time_start_param)
-            if time.time() - last_set_of_data > TIMER_SET_LOCK:
-                with self._data_lock:
-                    # give time to read new data
-                    try:
-                        url = self._url + '/Error/ActiveDataSource/' + self._plant_id + '?$inlinecount=allpages&$skip=0&$top=100'
-                        resp = self._session.get(
-                            url,
-                            auth=self._token,
-                            timeout=HTTP_ADDITIONAL_GET,
-                            verify=self._verify)
-                        resp.raise_for_status()
-                        if resp.status_code == 200:
-                            self._ariston_error_data = copy.deepcopy(resp.json())
-                            if self._store_file:
-                                with open('/config/data_' + self._name + '_errors.json', 'w') as ariston_fetched:
-                                    json.dump(resp.json(), ariston_fetched)
-                    except:
-                        _LOGGER.warning("%s Problem reading Error use data", self)
-                        raise CommError
-            else:
-                _LOGGER.debug("%s Setting data read restricted", self)
-        else:
-            _LOGGER.warning("%s Not properly logged in to get data", self)
-            raise LoginError
+        self._get_http_data(REQUEST_GET_ERROR)
 
     def _get_ch_data(self, dummy=None):
         """Get Ariston CH data from http"""
         if self._errors >= MAX_ERRORS_TIMER_EXTEND:
             # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_CH_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_CH_MULTIPLY
         else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_CH_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_CH_MULTIPLY
         retry_time = dt_util.now() + timedelta(seconds=retry_in)
         track_point_in_time(self._hass, self._get_ch_data, retry_time)
-        self._login_session()
-        if self._login and self._plant_id != "":
-            last_set_of_data = max(self._set_time_start, self._set_time_start_ch, self._set_time_start_param)
-            if time.time() - last_set_of_data > TIMER_SET_LOCK:
-                with self._data_lock:
-                    # give time to read new data
-                    try:
-                        self._get_time_start_ch = time.time()
-                        url = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
-                        resp = self._session.get(
-                            url,
-                            auth=self._token,
-                            timeout=HTTP_ADDITIONAL_GET,
-                            verify=self._verify)
-                        resp.raise_for_status()
-                        if resp.status_code == 200:
-                            self._get_time_end_ch = time.time()
-                            self._ariston_ch_data = copy.deepcopy(resp.json())
-                            if self._store_file:
-                                with open('/config/data_' + self._name + '_ch_weekly.json', 'w') as ariston_ch_fetched:
-                                    json.dump(resp.json(), ariston_ch_fetched)
-                    except:
-                        _LOGGER.warning("%s Problem reading CH data", self)
-                        raise CommError
-            else:
-                _LOGGER.debug("%s Setting data read restricted", self)
-        else:
-            _LOGGER.warning("%s Not properly logged in to get data", self)
-            raise LoginError
+        self._get_http_data(REQUEST_GET_CH)
 
     def _get_other_data(self, dummy=None):
         """Get Ariston other data from http"""
         if self._errors >= MAX_ERRORS_TIMER_EXTEND:
             # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_OTHER_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_OTHER_MULTIPLY
         else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_OTHER_MULTIPLY_TIME
+            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_OTHER_MULTIPLY
         retry_time = dt_util.now() + timedelta(seconds=retry_in)
         track_point_in_time(self._hass, self._get_other_data, retry_time)
-        self._login_session()
-        if self._login and self._plant_id != "":
-            last_set_of_data = max(self._set_time_start, self._set_time_start_ch, self._set_time_start_param)
-            if time.time() - last_set_of_data > TIMER_SET_LOCK:
-                with self._data_lock:
-                    # give time to read new data
-                    try:
-                        ids_to_fetch = ",".join(map(str, ARISTON_PARAM_LIST))
-                        url = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
-                              '&umsys=si'
-                        resp = self._session.get(
-                            url,
-                            auth=self._token,
-                            timeout=HTTP_ADDITIONAL_GET,
-                            verify=self._verify)
-                        resp.raise_for_status()
+        self._get_http_data(REQUEST_GET_OTHER)
 
-                        if resp.status_code == 200:
-                            self._ariston_other_data = copy.deepcopy(resp.json())
-                            if self._store_file:
-                                with open('/config/data_' + self._name + '_params.json', 'w') as ariston_fetched:
-                                    json.dump(resp.json(), ariston_fetched)
-
-                            for param_item in self._ariston_other_data:
-                                try:
-                                    if param_item["id"] == ARISTON_DHW_TIME_PROG_COMFORT and param_item[
-                                        "value"] != UNKNOWN_TEMP:
-                                        if "dhwTimeProgComfortTemp" in self._ariston_data and "value" in \
-                                                self._ariston_data["dhwTimeProgComfortTemp"]:
-                                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = param_item["value"]
-                                    elif param_item["id"] == ARISTON_DHW_TIME_PROG_ECONOMY and param_item[
-                                        "value"] != UNKNOWN_TEMP:
-                                        if "dhwTimeProgEconomyTemp" in self._ariston_data and "value" in \
-                                                self._ariston_data["dhwTimeProgEconomyTemp"]:
-                                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
-                                except:
-                                    continue
-                    except:
-                        _LOGGER.warning("%s Problem reading other data", self)
-                        raise CommError
-            else:
-                _LOGGER.debug("%s Setting data read restricted", self)
-
+    def _setting_http_data(self, set_data, request=""):
+        """setting of data"""
+        try:
+            if self._store_file:
+                with open('/config/data_' + self._name + request, 'w') as ariston_fetched:
+                    json.dump(set_data, ariston_fetched)
+        except:
+            pass
+        if request == REQUEST_SET_CH:
+            url = self._url + '/TimeProg/SubmitWeeklyPlan/' + self._plant_id + '?umsys=si'
+            get_request = REQUEST_GET_CH
+            http_timeout = HTTP_TIMEOUT_SET_CH
+        elif request == REQUEST_SET_OTHER:
+            url = self._url + '/Menu/User/Submit/' + self._plant_id + '?umsys=si'
+            get_request = REQUEST_GET_OTHER
+            http_timeout = HTTP_TIMEOUT_SET_PARAM
         else:
-            _LOGGER.warning("%s Not properly logged in to get data", self)
-            raise LoginError
+            url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
+            get_request = REQUEST_GET_MAIN
+            http_timeout = HTTP_TIMEOUT_SET
+        try:
+            self._set_time_start[get_request] = time.time()
+            resp = self._session.post(
+                url,
+                auth=self._token,
+                timeout=http_timeout,
+                json=set_data)
+            if resp.status_code != 200:
+                _LOGGER.warning("%s %s Command to set data failed with code: %s", self, request, resp.status_code)
+                raise CommError
+            resp.raise_for_status()
+            self._set_time_end[get_request] = time.time()
+            try:
+                if request == REQUEST_SET_MAIN:
+                    self._store_data(resp, REQUEST_SET_MAIN)
+                    if self._store_file:
+                        with open("/config/data_" + self._name + request + "_reply.txt", "w") as f:
+                            f.write(resp.text)
+            except:
+                pass
+        except requests.exceptions.ReadTimeout as error:
+            _LOGGER.warning('%s %s Request timeout', self, request)
+            raise CommError(error)
+        except CommError:
+            _LOGGER.warning('%s %s Request communication error', self, request)
+            raise
+        _LOGGER.info('%s %s Data was presumably changed', self, request)
 
-    def _actual_set_http_data(self, dummy=None):
+    def _preparing_setting_http_data(self, dummy=None):
+        """Preparing and setting http data"""
         self._login_session()
         with self._data_lock:
             if not self._set_new_data_pending:
@@ -606,7 +637,7 @@ class AristonChecker():
 
                 if PARAM_MODE in self._set_param:
                     if set_data["NewValue"]["mode"] == self._set_param[PARAM_MODE]:
-                        if self._set_time_start < self._get_time_end:
+                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_MODE]
                         else:
@@ -618,7 +649,7 @@ class AristonChecker():
 
                 if PARAM_DHW_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
-                        if self._set_time_start < self._get_time_end:
+                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         else:
@@ -631,7 +662,11 @@ class AristonChecker():
                 if PARAM_DHW_COMFORT_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"] == self._set_param[
                         PARAM_DHW_COMFORT_TEMPERATURE]:
-                        if max(self._set_time_start, self._set_time_start_param) < self._get_time_end:
+                        last_set_of_data = max(self._set_time_start[REQUEST_GET_MAIN],
+                                               self._set_time_start[REQUEST_GET_OTHER])
+                        last_read_of_data = max(self._get_time_end[REQUEST_GET_MAIN],
+                                                self._get_time_end[REQUEST_GET_OTHER])
+                        if last_set_of_data < last_read_of_data:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_COMFORT_TEMPERATURE]
                         else:
@@ -653,7 +688,11 @@ class AristonChecker():
                 if PARAM_DHW_ECONOMY_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"] == self._set_param[
                         PARAM_DHW_ECONOMY_TEMPERATURE]:
-                        if max(self._set_time_start, self._set_time_start_param) < self._get_time_end:
+                        last_set_of_data = max(self._set_time_start[REQUEST_GET_MAIN],
+                                               self._set_time_start[REQUEST_GET_OTHER])
+                        last_read_of_data = max(self._get_time_end[REQUEST_GET_MAIN],
+                                                self._get_time_end[REQUEST_GET_OTHER])
+                        if last_set_of_data < last_read_of_data:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE]
                         else:
@@ -677,7 +716,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_DHW_COMFORT_FUNCTION:
                                 if param_item["value"] == self._set_param[PARAM_DHW_COMFORT_FUNCTION]:
-                                    if self._set_time_start_param < self._get_time_end:
+                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_DHW_COMFORT_FUNCTION]
                                     else:
@@ -706,7 +745,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_INTERNET_TIME:
                                 if param_item["value"] == self._set_param[PARAM_INTERNET_TIME]:
-                                    if self._set_time_start_param < self._get_time_end:
+                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_INTERNET_TIME]
                                     else:
@@ -735,7 +774,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_INTERNET_WEATHER:
                                 if param_item["value"] == self._set_param[PARAM_INTERNET_TIME]:
-                                    if self._set_time_start_param < self._get_time_end:
+                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_INTERNET_WEATHER]
                                     else:
@@ -762,7 +801,7 @@ class AristonChecker():
                 if PARAM_CH_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["zone"]["comfortTemp"]["value"] == self._set_param[
                         PARAM_CH_SET_TEMPERATURE]:
-                        if self._set_time_start < self._get_time_end:
+                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_SET_TEMPERATURE]
                         else:
@@ -776,7 +815,7 @@ class AristonChecker():
                     if set_ch_data != {}:
                         if set_ch_data["comfortTemp"]["value"] == self._set_param[
                             PARAM_CH_COMFORT_TEMPERATURE]:
-                            if self._set_time_start_ch < self._get_time_end_ch:
+                            if self._set_time_start[REQUEST_GET_CH] < self._get_time_end[REQUEST_GET_CH]:
                                 # value should be up to date and match to remove from setting
                                 del self._set_param[PARAM_CH_COMFORT_TEMPERATURE]
                             else:
@@ -793,7 +832,7 @@ class AristonChecker():
                     if set_ch_data != {}:
                         if set_ch_data["economyTemp"]["value"] == self._set_param[
                             PARAM_CH_ECONOMY_TEMPERATURE]:
-                            if self._set_time_start_ch < self._get_time_end_ch:
+                            if self._set_time_start[REQUEST_GET_CH] < self._get_time_end[REQUEST_GET_CH]:
                                 # value should be up to date and match to remove from setting
                                 del self._set_param[PARAM_CH_ECONOMY_TEMPERATURE]
                             else:
@@ -808,7 +847,7 @@ class AristonChecker():
 
                 if PARAM_CH_MODE in self._set_param:
                     if set_data["NewValue"]["zone"]["mode"]["value"] == self._set_param[PARAM_CH_MODE]:
-                        if self._set_time_start < self._get_time_end:
+                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_MODE]
                         else:
@@ -820,7 +859,7 @@ class AristonChecker():
 
                 if PARAM_DHW_MODE in self._set_param:
                     if set_data["NewValue"]["dhwMode"] == self._set_param[PARAM_DHW_MODE]:
-                        if self._set_time_start < self._get_time_end:
+                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_MODE]
                         else:
@@ -835,7 +874,7 @@ class AristonChecker():
 
                         # retry again after enough time
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
-                        track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
+                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
 
@@ -844,7 +883,7 @@ class AristonChecker():
 
                         # retry again after enough time
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_CH)
-                        track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
+                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_ch_retry = self._set_ch_retry + 1
                         self._set_scheduled = True
 
@@ -853,7 +892,7 @@ class AristonChecker():
 
                         # retry again after enough time
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_PARAM)
-                        track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
+                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_param_retry = self._set_param_retry + 1
                         self._set_scheduled = True
 
@@ -864,120 +903,31 @@ class AristonChecker():
                     self._set_param = {}
 
                 if main_data_changed:
-
                     try:
-                        if self._store_file:
-                            with open('/config/data_' + self._name + '_main_SET.json', 'w') as ariston_fetched:
-                                json.dump(set_data, ariston_fetched)
+                        self._setting_http_data(set_data, REQUEST_SET_MAIN)
                     except:
                         pass
-
-                    try:
-                        url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
-                        self._set_time_start = time.time()
-                        resp = self._session.post(
-                            url,
-                            auth=self._token,
-                            timeout=HTTP_TIMEOUT_SET,
-                            json=set_data)
-                        if resp.status_code != 200:
-                            _LOGGER.warning("%s Command to set data failed with code: %s", self, resp.status_code)
-                            raise CommError
-                        resp.raise_for_status()
-                        self._set_time_end = time.time()
-                        try:
-                            if self._store_file:
-                                with open("/config/data_" + self._name + "_main_SET_reply.txt", "w") as f:
-                                    f.write(resp.text)
-                        except:
-                            pass
-                    except requests.exceptions.ReadTimeout as error:
-                        _LOGGER.warning('%s Request timeout', self)
-                        raise CommError(error)
-                    except CommError:
-                        _LOGGER.warning('%s Request communication error', self)
-                        raise
-                    _LOGGER.info('%s Data was presumably changed', self)
-
-                    self._store_main_data(resp.json(), "_set")
 
                 elif ch_data_changed:
-
                     try:
-                        if self._store_file:
-                            with open('/config/data_' + self._name + '_ch_weekly_SET.json', 'w') as ariston_fetched:
-                                json.dump(set_ch_data, ariston_fetched)
+                        if set_ch_data != {}:
+                            self._setting_http_data(set_ch_data, REQUEST_SET_CH)
+                        else:
+                            _LOGGER.warning('%s No valid data to set CH data', self)
+                            raise CommError(error)
                     except:
                         pass
-                    if set_ch_data != {}:
-                        try:
-                            url = self._url + '/TimeProg/SubmitWeeklyPlan/' + self._plant_id + '?umsys=si'
-                            self._set_time_start_ch = time.time()
-                            resp = self._session.post(
-                                url,
-                                auth=self._token,
-                                timeout=HTTP_TIMEOUT_SET_CH,
-                                json=set_ch_data)
-                            if resp.status_code != 200:
-                                _LOGGER.warning("%s Command to set data failed with code: %s", self, resp.status_code)
-                                raise CommError
-                            resp.raise_for_status()
-                            self._set_time_end_ch = time.time()
-                            try:
-                                if self._store_file:
-                                    with open("/config/data_" + self._name + "_ch_weekly_SET_reply.txt", "w") as f:
-                                        f.write(resp.text)
-                            except:
-                                pass
-                        except requests.exceptions.ReadTimeout as error:
-                            _LOGGER.warning('%s Request timeout', self)
-                            raise CommError(error)
-                        except CommError:
-                            _LOGGER.warning('%s Request communication error', self)
-                            raise
-                        _LOGGER.info('%s CH data was presumably changed', self)
-                    else:
-                        _LOGGER.warning('%s No valid data to set CH data', self)
-                        raise CommError(error)
 
                 elif param_data_changed:
 
                     try:
-                        if self._store_file:
-                            with open('/config/data_' + self._name + '_param_SET.json', 'w') as ariston_fetched:
-                                json.dump(set_param_data, ariston_fetched)
+                        if set_param_data != []:
+                            self._setting_http_data(set_param_data, REQUEST_SET_OTHER)
+                        else:
+                            _LOGGER.warning('%s No valid data to set parameters', self)
+                            raise CommError(error)
                     except:
                         pass
-                    if set_param_data != []:
-                        try:
-                            url = self._url + '/Menu/User/Submit/' + self._plant_id + '?umsys=si'
-                            self._set_time_start_param = time.time()
-                            resp = self._session.post(
-                                url,
-                                auth=self._token,
-                                timeout=HTTP_TIMEOUT_SET_PARAM,
-                                json=set_param_data)
-                            if resp.status_code != 200:
-                                _LOGGER.warning("%s Command to set data failed with code: %s", self, resp.status_code)
-                                raise CommError
-                            resp.raise_for_status()
-                            self._set_time_end_param = time.time()
-                            try:
-                                if self._store_file:
-                                    with open("/config/data_" + self._name + "_param_SET_reply.txt", "w") as f:
-                                        f.write(resp.text)
-                            except:
-                                pass
-                        except requests.exceptions.ReadTimeout as error:
-                            _LOGGER.warning('%s Request timeout', self)
-                            raise CommError(error)
-                        except CommError:
-                            _LOGGER.warning('%s Request communication error', self)
-                            raise
-                        _LOGGER.info('%s Param data was presumably changed', self)
-                    else:
-                        _LOGGER.warning('%s No valid data to set parameters', self)
-                        raise CommError(error)
                 else:
                     _LOGGER.debug('%s Same data was used', self)
             else:
@@ -986,7 +936,7 @@ class AristonChecker():
                     if self._set_main_retry < self._set_max_retries:
                         # retry again after enough time to fetch data twice
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
-                        track_point_in_time(self._hass, self._actual_set_http_data, retry_time)
+                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
                 else:
@@ -1193,45 +1143,11 @@ class AristonChecker():
 
                 self._set_new_data_pending = True
 
-            self._actual_set_http_data()
+            self._preparing_setting_http_data()
 
         else:
             _LOGGER.warning("%s No valid data fetched from server to set changes", self)
             raise CommError
-
-    def command(self, dummy=None):
-        """trigger fetching of data"""
-        with self._data_lock:
-            if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-                # give a little rest to the system
-                self._retry_timeout = HTTP_RETRY_INTERVAL_DOWN
-                _LOGGER.warning('%s Retrying in %s seconds', self, self._retry_timeout)
-            else:
-                self._retry_timeout = HTTP_RETRY_INTERVAL
-                _LOGGER.debug('%s Fetching data in %s seconds', self, self._retry_timeout)
-            retry_time = dt_util.now() + timedelta(seconds=self._retry_timeout)
-            track_point_in_time(self._hass, self.command, retry_time)
-        try:
-            self._get_http_data()
-        except AristonError:
-            with self._lock:
-                was_online = self.available
-                self._errors += 1
-                _LOGGER.warning("%s errors: %i", self._name, self._errors)
-                offline = not self.available
-            if offline and was_online:
-                with self._plant_id_lock:
-                    self._login = False
-                _LOGGER.error("%s is offline: Too many errors", self._name)
-                dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
-            raise
-        with self._lock:
-            was_offline = not self.available
-            self._errors = 0
-            self._init_available = True
-        if was_offline:
-            _LOGGER.info("%s Ariston back online", self._name)
-            dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
 
 
 def setup(hass, config):
@@ -1248,8 +1164,9 @@ def setup(hass, config):
             api = AristonChecker(hass, device=device, name=name, username=username, password=password, retries=retries,
                                  store_file=store_file)
             api_list.append(api)
-            api.command()
+            api._get_main_data()
             # schedule other data fetching
+            #track_point_in_time(api._hass, api._get_main_data, dt_util.now() + timedelta(seconds=1))
             track_point_in_time(api._hass, api._get_other_data, dt_util.now() + timedelta(seconds=20))
             track_point_in_time(api._hass, api._get_ch_data, dt_util.now() + timedelta(seconds=35))
             track_point_in_time(api._hass, api._get_error_data, dt_util.now() + timedelta(seconds=50))
