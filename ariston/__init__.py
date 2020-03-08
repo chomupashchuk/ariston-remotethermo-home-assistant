@@ -57,14 +57,15 @@ from .const import (
     PARAM_MODE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
+    PARAM_CH_COMFORT_TEMPERATURE,
+    PARAM_CH_ECONOMY_TEMPERATURE,
+    PARAM_CH_DETECTED_TEMPERATURE,
     PARAM_DHW_COMFORT_FUNCTION,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
     PARAM_DHW_COMFORT_TEMPERATURE,
     PARAM_DHW_ECONOMY_TEMPERATURE,
     PARAM_DHW_STORAGE_TEMPERATURE,
-    PARAM_CH_COMFORT_TEMPERATURE,
-    PARAM_CH_ECONOMY_TEMPERATURE,
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
     PARAM_STRING_TO_VALUE,
@@ -99,12 +100,13 @@ DEFAULT_MODES = [0, 1, 5]
 DEFAULT_CH_MODES = [2, 3]
 MAX_ERRORS = 3
 MAX_ERRORS_TIMER_EXTEND = 2
+MAX_ZERO_TOLERANCE = 10
 HTTP_RETRY_INTERVAL = 60
 HTTP_RETRY_INTERVAL_DOWN = 90
-HTTP_RETRY_GAS_MULTIPLY = 11
+HTTP_RETRY_GAS_MULTIPLY = 13
 HTTP_RETRY_ERROR_MULTIPLY = 5
-HTTP_RETRY_CH_MULTIPLY = 3
-HTTP_RETRY_OTHER_MULTIPLY = 4
+HTTP_RETRY_CH_MULTIPLY = 7
+HTTP_RETRY_OTHER_MULTIPLY = 3
 HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMEOUT_LOGIN = 3
 HTTP_TIMEOUT_GET = 15
@@ -116,7 +118,7 @@ HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + HTTP_TIMER_SET_LOCK + 5
 HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_CH_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
 HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_OTHER_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
 
-UNKNOWN_TEMP = 0
+UNKNOWN_TEMP = 0.0
 REQUEST_GET_MAIN = "_get_main"
 REQUEST_GET_CH = "_get_ch"
 REQUEST_GET_ERROR = "_get_error"
@@ -221,18 +223,30 @@ class AristonChecker():
         self._data_lock = threading.Lock()
         self._device = device
         self._errors = 0
-        self._get_time_start = {REQUEST_GET_MAIN: 0,
-                                REQUEST_GET_CH: 0,
-                                REQUEST_GET_ERROR: 0,
-                                REQUEST_GET_GAS: 0,
-                                REQUEST_GET_OTHER: 0
-                                }
-        self._get_time_end = {REQUEST_GET_MAIN: 0,
-                              REQUEST_GET_CH: 0,
-                              REQUEST_GET_ERROR: 0,
-                              REQUEST_GET_GAS: 0,
-                              REQUEST_GET_OTHER: 0
-                              }
+        self._get_time_start = {
+            REQUEST_GET_MAIN: 0,
+            REQUEST_GET_CH: 0,
+            REQUEST_GET_ERROR: 0,
+            REQUEST_GET_GAS: 0,
+            REQUEST_GET_OTHER: 0
+        }
+        self._get_time_end = {
+            REQUEST_GET_MAIN: 0,
+            REQUEST_GET_CH: 0,
+            REQUEST_GET_ERROR: 0,
+            REQUEST_GET_GAS: 0,
+            REQUEST_GET_OTHER: 0
+        }
+        self._get_zero_temperature = {
+            PARAM_CH_SET_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_CH_COMFORT_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_CH_ECONOMY_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_CH_DETECTED_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_DHW_SET_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_DHW_COMFORT_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_DHW_ECONOMY_TEMPERATURE: UNKNOWN_TEMP,
+            PARAM_DHW_STORAGE_TEMPERATURE: UNKNOWN_TEMP
+        }
         self._hass = hass
         self._init_available = False
         self._lock = threading.Lock()
@@ -249,18 +263,16 @@ class AristonChecker():
         self._set_max_retries = retries
         self._set_new_data_pending = False
         self._set_scheduled = False
-        self._set_time_start = {REQUEST_GET_MAIN: 0,
-                                REQUEST_GET_CH: 0,
-                                REQUEST_GET_ERROR: 0,
-                                REQUEST_GET_GAS: 0,
-                                REQUEST_GET_OTHER: 0
-                                }
-        self._set_time_end = {REQUEST_GET_MAIN: 0,
-                              REQUEST_GET_CH: 0,
-                              REQUEST_GET_ERROR: 0,
-                              REQUEST_GET_GAS: 0,
-                              REQUEST_GET_OTHER: 0
-                              }
+        self._set_time_start = {
+            REQUEST_SET_MAIN: 0,
+            REQUEST_SET_CH: 0,
+            REQUEST_SET_OTHER: 0
+        }
+        self._set_time_end = {
+            REQUEST_GET_MAIN: 0,
+            REQUEST_GET_CH: 0,
+            REQUEST_GET_OTHER: 0
+        }
         self._store_file = store_file
         self._token_lock = threading.Lock()
         self._token = None
@@ -309,68 +321,215 @@ class AristonChecker():
         """Store received dictionary"""
         if resp.status_code != 200:
             _LOGGER.warning('%s %s invalid reply code %s', self, request_type, resp.status_code)
-            raise CommError(error)
+            raise CommError
         if not _json_validator(resp.json()):
             _LOGGER.warning('%s %s No json detected', self, request_type)
-            raise CommError(error)
-        log_temp_zero = False
-        dhw_temp = {}
+            raise CommError
+        store_none_zero = False
+        last_temp = {}
+        last_temp_min = {}
+        last_temp_max = {}
         if request_type in [REQUEST_GET_MAIN, REQUEST_SET_MAIN]:
+
             try:
                 allowed_modes = self._ariston_data["allowedModes"]
                 allowed_ch_modes = self._ariston_data["zone"]["mode"]["allowedOptions"]
-                dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = self._ariston_data["dhwStorageTemp"]
-                dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["value"]
-                dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["value"]
+                last_temp[PARAM_DHW_STORAGE_TEMPERATURE] = self._ariston_data["dhwStorageTemp"]
+                last_temp[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["value"]
+                last_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["value"]
+                last_temp[PARAM_DHW_SET_TEMPERATURE] = self._ariston_data["dhwTemp"]["value"]
+                last_temp[PARAM_CH_DETECTED_TEMPERATURE] = self._ariston_data["zone"]["roomTemp"]
+                last_temp[PARAM_CH_SET_TEMPERATURE] = self._ariston_data["zone"]["comfortTemp"]["value"]
+                last_temp_min[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["min"]
+                last_temp_min[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["min"]
+                last_temp_min[PARAM_DHW_SET_TEMPERATURE] = self._ariston_data["dhwTemp"]["min"]
+                last_temp_min[PARAM_CH_SET_TEMPERATURE] = self._ariston_data["zone"]["comfortTemp"]["min"]
+                last_temp_max[PARAM_DHW_COMFORT_TEMPERATURE] = self._ariston_data["dhwTimeProgComfortTemp"]["max"]
+                last_temp_max[PARAM_DHW_ECONOMY_TEMPERATURE] = self._ariston_data["dhwTimeProgEconomyTemp"]["max"]
+                last_temp_max[PARAM_DHW_SET_TEMPERATURE] = self._ariston_data["dhwTemp"]["max"]
+                last_temp_max[PARAM_CH_SET_TEMPERATURE] = self._ariston_data["zone"]["comfortTemp"]["max"]
             except:
                 allowed_modes = []
                 allowed_ch_modes = []
-                dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] = UNKNOWN_TEMP
-                dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
-                dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_DHW_STORAGE_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_DHW_SET_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_CH_DETECTED_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_CH_SET_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_DHW_SET_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_CH_SET_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_DHW_SET_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_CH_SET_TEMPERATURE] = UNKNOWN_TEMP
                 pass
             try:
                 self._ariston_data = copy.deepcopy(resp.json())
             except:
-                with self._plant_id_lock:
-                    self._login = False
-                _LOGGER.warning("%s Invalid data received, not JSON", self)
+                self._ariston_data = {}
+                _LOGGER.warning("%s Invalid data received for Main, not JSON", self)
                 raise CommError
             try:
+                # force default modes if received none
                 if self._ariston_data["allowedModes"] == []:
                     if allowed_modes != []:
                         self._ariston_data["allowedModes"] = allowed_modes
                     else:
                         self._ariston_data["allowedModes"] = DEFAULT_MODES
+                # force default CH modes if received none
                 if self._ariston_data["zone"]["mode"]["allowedOptions"] == []:
                     if allowed_ch_modes != []:
                         self._ariston_data["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
                     else:
                         self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+                # keep latest DHW storage temperature if received invalid
                 if self._ariston_data["dhwStorageTemp"] == UNKNOWN_TEMP:
-                    if dhw_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
-                        log_temp_zero = True
+                    if last_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_DHW_STORAGE_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_DHW_STORAGE_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["dhwStorageTemp"] = last_temp[PARAM_DHW_STORAGE_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_DHW_STORAGE_TEMPERATURE] = 0
+                # keep latest DHW comfort temperature if received invalid
                 if self._ariston_data["dhwTimeProgComfortTemp"]["value"] == UNKNOWN_TEMP:
-                    if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
-                        log_temp_zero = True
+                    if last_temp[PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP and last_temp_min[
+                        PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP and last_temp_max[
+                        PARAM_DHW_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_DHW_COMFORT_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_DHW_COMFORT_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = last_temp[
+                                PARAM_DHW_COMFORT_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_DHW_COMFORT_TEMPERATURE] = 0
+                # keep latest DHW economy temperature if received invalid
                 if self._ariston_data["dhwTimeProgEconomyTemp"]["value"] == UNKNOWN_TEMP:
-                    if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
-                        log_temp_zero = True
+                    if last_temp[PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP and last_temp_min[
+                        PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP and last_temp_max[
+                        PARAM_DHW_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_DHW_ECONOMY_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_DHW_ECONOMY_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = last_temp[
+                                PARAM_DHW_ECONOMY_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_DHW_ECONOMY_TEMPERATURE] = 0
+                # keep latest DHW set temperature if received invalid
+                if self._ariston_data["dhwTemp"]["value"] == UNKNOWN_TEMP:
+                    if last_temp[PARAM_DHW_SET_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_DHW_SET_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_DHW_SET_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["dhwTemp"]["value"] = last_temp[
+                                PARAM_DHW_SET_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_DHW_SET_TEMPERATURE] = 0
+                # keep latest CH detected temperature if received invalid
+                if self._ariston_data["zone"]["roomTemp"] == UNKNOWN_TEMP:
+                    if last_temp[PARAM_CH_DETECTED_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_CH_DETECTED_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_CH_DETECTED_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["zone"]["roomTemp"] = last_temp[
+                                PARAM_CH_DETECTED_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_CH_DETECTED_TEMPERATURE] = 0
+                # keep latest CH set temperature if received invalid
+                if self._ariston_data["zone"]["comfortTemp"]["value"] == UNKNOWN_TEMP:
+                    if last_temp[PARAM_CH_SET_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_CH_SET_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_CH_SET_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_data["zone"]["comfortTemp"]["value"] = last_temp[
+                                PARAM_CH_SET_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_CH_SET_TEMPERATURE] = 0
             except:
                 self._ariston_data["allowedModes"] = DEFAULT_MODES
                 self._ariston_data["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
-                raise CommError(error)
+                _LOGGER.warning("%s Invalid data received for Main", self)
+                raise CommError
+
         elif request_type == REQUEST_GET_CH:
-            self._ariston_ch_data = copy.deepcopy(resp.json())
+
+            try:
+                last_temp[PARAM_CH_COMFORT_TEMPERATURE] = self._ariston_ch_data["comfortTemp"]["value"]
+                last_temp[PARAM_CH_ECONOMY_TEMPERATURE] = self._ariston_ch_data["economyTemp"]["value"]
+                last_temp_min[PARAM_CH_COMFORT_TEMPERATURE] = self._ariston_ch_data["comfortTemp"]["min"]
+                last_temp_min[PARAM_CH_ECONOMY_TEMPERATURE] = self._ariston_ch_data["economyTemp"]["min"]
+                last_temp_max[PARAM_CH_COMFORT_TEMPERATURE] = self._ariston_ch_data["comfortTemp"]["max"]
+                last_temp_max[PARAM_CH_ECONOMY_TEMPERATURE] = self._ariston_ch_data["economyTemp"]["max"]
+            except:
+                last_temp[PARAM_CH_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp[PARAM_CH_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_CH_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_min[PARAM_CH_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_CH_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                last_temp_max[PARAM_CH_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                pass
+            try:
+                self._ariston_ch_data = copy.deepcopy(resp.json())
+            except:
+                self._ariston_ch_data = {}
+                _LOGGER.warning("%s Invalid data received for CH, not JSON", self)
+                raise CommError
+            try:
+                # keep latest CH comfort temperature if received invalid
+                if self._ariston_ch_data["comfortTemp"]["value"] == UNKNOWN_TEMP:
+                    if last_temp[PARAM_CH_COMFORT_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_CH_COMFORT_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_CH_COMFORT_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_ch_data["comfortTemp"]["value"] = last_temp[PARAM_CH_COMFORT_TEMPERATURE]
+                else:
+                    self._get_zero_temperature[PARAM_CH_COMFORT_TEMPERATURE] = 0
+                # keep latest CH comfort temperature if received invalid
+                if self._ariston_ch_data["economyTemp"]["value"] == UNKNOWN_TEMP:
+                    if last_temp[PARAM_CH_ECONOMY_TEMPERATURE] != UNKNOWN_TEMP:
+                        self._get_zero_temperature[PARAM_CH_ECONOMY_TEMPERATURE] += 1
+                        store_none_zero = True
+                        if self._get_zero_temperature[PARAM_CH_ECONOMY_TEMPERATURE] < MAX_ZERO_TOLERANCE:
+                            self._ariston_ch_data["economyTemp"]["value"] = last_temp[PARAM_CH_ECONOMY_TEMPERATURE]
+                    else:
+                        self._get_zero_temperature[PARAM_CH_ECONOMY_TEMPERATURE] = 0
+            except:
+                _LOGGER.warning("%s Invalid data received for CH", self)
+                raise CommError
+
         elif request_type == REQUEST_GET_ERROR:
-            self._ariston_error_data = copy.deepcopy(resp.json())
+
+            try:
+                self._ariston_error_data = copy.deepcopy(resp.json())
+            except:
+                self._ariston_error_data = {}
+                _LOGGER.warning("%s Invalid data received for error, not JSON", self)
+                raise CommError
+
         elif request_type == REQUEST_GET_GAS:
-            self._ariston_gas_data = copy.deepcopy(resp.json())
+
+            try:
+                self._ariston_gas_data = copy.deepcopy(resp.json())
+            except:
+                self._ariston_gas_data = {}
+                _LOGGER.warning("%s Invalid data received for error, not JSON", self)
+                raise CommError
+
         elif request_type == REQUEST_GET_OTHER:
-            self._ariston_other_data = copy.deepcopy(resp.json())
+
+            try:
+                self._ariston_other_data = copy.deepcopy(resp.json())
+            except:
+                self._ariston_other_data = {}
+                _LOGGER.warning("%s Invalid data received for error, not JSON", self)
+                raise CommError
+
             for param_item in self._ariston_other_data:
                 try:
-                    # Copy latest DHW temperature
+                    # Copy latest DHW temperatures
                     if param_item["id"] == ARISTON_DHW_TIME_PROG_COMFORT and param_item["value"] != UNKNOWN_TEMP:
                         if "dhwTimeProgComfortTemp" in self._ariston_data and "value" in \
                                 self._ariston_data["dhwTimeProgComfortTemp"]:
@@ -381,15 +540,20 @@ class AristonChecker():
                             self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
                 except:
                     continue
+
         self._get_time_end[request_type] = time.time()
+
         if self._store_file:
-            with open('/config/data_' + self._name + request_type, 'w') as ariston_fetched:
+            with open('/config/data_' + self._name + request_type + '.json', 'w') as ariston_fetched:
                 json.dump(self._ariston_data, ariston_fetched)
-            if log_temp_zero:
-                with open('/config/data_' + self._name + request_type + '_zero.json', 'w') as ariston_fetched:
-                    json.dump(self._ariston_data, ariston_fetched)
+            with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
+                json.dump(self._get_zero_temperature, ariston_fetched)
+            with open('/config/data_' + self._name + request_type + '_timers.json', 'w') as ariston_fetched:
+                json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
+                          ariston_fetched)
+            if store_none_zero:
                 with open('/config/data_' + self._name + request_type + '_non_zero.json', 'w') as ariston_fetched:
-                    json.dump(dhw_temp, ariston_fetched)
+                    json.dump([last_temp, last_temp_min, last_temp_max], ariston_fetched)
 
     def _get_http_data(self, request_type=""):
         """Common fetching of http data"""
@@ -517,53 +681,55 @@ class AristonChecker():
         track_point_in_time(self._hass, self._get_other_data, retry_time)
         self._get_http_data(REQUEST_GET_OTHER)
 
-    def _setting_http_data(self, set_data, request=""):
+    def _setting_http_data(self, set_data, request_type=""):
         """setting of data"""
         try:
             if self._store_file:
-                with open('/config/data_' + self._name + request, 'w') as ariston_fetched:
+                with open('/config/data_' + self._name + request_type + '.json', 'w') as ariston_fetched:
                     json.dump(set_data, ariston_fetched)
+                with open('/config/data_' + self._name + request_type + '_all.json', 'w') as ariston_fetched:
+                    json.dump(self._set_param, ariston_fetched)
+                with open('/config/data_' + self._name + request_type + '_timers.json', 'w') as ariston_fetched:
+                    json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
+                              ariston_fetched)
         except:
             pass
-        if request == REQUEST_SET_CH:
+        if request_type == REQUEST_SET_CH:
             url = self._url + '/TimeProg/SubmitWeeklyPlan/' + self._plant_id + '?umsys=si'
-            get_request = REQUEST_GET_CH
             http_timeout = HTTP_TIMEOUT_SET_CH
-        elif request == REQUEST_SET_OTHER:
+        elif request_type == REQUEST_SET_OTHER:
             url = self._url + '/Menu/User/Submit/' + self._plant_id + '?umsys=si'
-            get_request = REQUEST_GET_OTHER
             http_timeout = HTTP_TIMEOUT_SET_PARAM
         else:
             url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
-            get_request = REQUEST_GET_MAIN
             http_timeout = HTTP_TIMEOUT_SET
         try:
-            self._set_time_start[get_request] = time.time()
+            self._set_time_start[request_type] = time.time()
             resp = self._session.post(
                 url,
                 auth=self._token,
                 timeout=http_timeout,
                 json=set_data)
             if resp.status_code != 200:
-                _LOGGER.warning("%s %s Command to set data failed with code: %s", self, request, resp.status_code)
+                _LOGGER.warning("%s %s Command to set data failed with code: %s", self, request_type, resp.status_code)
                 raise CommError
             resp.raise_for_status()
-            self._set_time_end[get_request] = time.time()
+            self._set_time_end[request_type] = time.time()
             try:
-                if request == REQUEST_SET_MAIN:
+                if request_type == REQUEST_SET_MAIN:
                     self._store_data(resp, REQUEST_SET_MAIN)
                     if self._store_file:
-                        with open("/config/data_" + self._name + request + "_reply.txt", "w") as f:
+                        with open("/config/data_" + self._name + request_type + "_reply.txt", "w") as f:
                             f.write(resp.text)
             except:
                 pass
         except requests.exceptions.ReadTimeout as error:
-            _LOGGER.warning('%s %s Request timeout', self, request)
+            _LOGGER.warning('%s %s Request timeout', self, request_type)
             raise CommError(error)
         except CommError:
-            _LOGGER.warning('%s %s Request communication error', self, request)
+            _LOGGER.warning('%s %s Request communication error', self, request_type)
             raise
-        _LOGGER.info('%s %s Data was presumably changed', self, request)
+        _LOGGER.info('%s %s Data was presumably changed', self, request_type)
 
     def _preparing_setting_http_data(self, dummy=None):
         """Preparing and setting http data"""
@@ -632,12 +798,53 @@ class AristonChecker():
                     set_ch_data = {}
                     pass
 
+                dhw_temp = {}
+                dhw_temp_time = {}
+                try:
+                    dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                    dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                    dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE] = 0
+                    dhw_temp_time[PARAM_DHW_ECONOMY_TEMPERATURE] = 0
+                    if self._get_time_end[REQUEST_GET_MAIN] > self._get_time_end[REQUEST_GET_OTHER] and \
+                            self._get_zero_temperature[PARAM_DHW_COMFORT_TEMPERATURE] == 0:
+                        if set_data["NewValue"]["dhwTimeProgSupported"]:
+                            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = set_data["NewValue"]["dhwTimeProgComfortTemp"][
+                                "value"]
+                            dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE] = self._get_time_end[REQUEST_GET_MAIN]
+                        else:
+                            dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = set_data["NewValue"]["dhwTemp"]["value"]
+                            dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE] = self._get_time_end[REQUEST_GET_MAIN]
+                    else:
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_DHW_TIME_PROG_COMFORT:
+                                dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = param_item["value"]
+                                dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE] = self._get_time_end[REQUEST_GET_OTHER]
+
+                    if self._get_time_end[REQUEST_GET_MAIN] > self._get_time_end[REQUEST_GET_OTHER] and \
+                            self._get_zero_temperature[PARAM_DHW_ECONOMY_TEMPERATURE] == 0 and set_data["NewValue"][
+                        "dhwTimeProgSupported"]:
+                        dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = set_data["NewValue"]["dhwTimeProgEconomyTemp"][
+                            "value"]
+                        dhw_temp_time[PARAM_DHW_ECONOMY_TEMPERATURE] = self._get_time_end[REQUEST_GET_MAIN]
+                    else:
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_DHW_TIME_PROG_ECONOMY:
+                                dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = param_item["value"]
+                                dhw_temp_time[PARAM_DHW_ECONOMY_TEMPERATURE] = self._get_time_end[REQUEST_GET_OTHER]
+
+                except:
+                    dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] = UNKNOWN_TEMP
+                    dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
+                    dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE] = 0
+                    dhw_temp_time[PARAM_DHW_ECONOMY_TEMPERATURE] = 0
+                    pass
+
                 # prepare setting of parameter data dictionary
                 set_param_data = []
 
                 if PARAM_MODE in self._set_param:
                     if set_data["NewValue"]["mode"] == self._set_param[PARAM_MODE]:
-                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
+                        if self._set_time_start[REQUEST_SET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_MODE]
                         else:
@@ -649,7 +856,8 @@ class AristonChecker():
 
                 if PARAM_DHW_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
-                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
+                        if self._set_time_start[REQUEST_SET_MAIN] < self._get_time_end[REQUEST_GET_MAIN] and \
+                                self._get_zero_temperature[PARAM_DHW_SET_TEMPERATURE] == 0:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         else:
@@ -660,13 +868,8 @@ class AristonChecker():
                         main_data_changed = True
 
                 if PARAM_DHW_COMFORT_TEMPERATURE in self._set_param:
-                    if set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"] == self._set_param[
-                        PARAM_DHW_COMFORT_TEMPERATURE]:
-                        last_set_of_data = max(self._set_time_start[REQUEST_GET_MAIN],
-                                               self._set_time_start[REQUEST_GET_OTHER])
-                        last_read_of_data = max(self._get_time_end[REQUEST_GET_MAIN],
-                                                self._get_time_end[REQUEST_GET_OTHER])
-                        if last_set_of_data < last_read_of_data:
+                    if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] == self._set_param[PARAM_DHW_COMFORT_TEMPERATURE]:
+                        if self._set_time_start[REQUEST_SET_OTHER] < dhw_temp_time[PARAM_DHW_COMFORT_TEMPERATURE]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_COMFORT_TEMPERATURE]
                         else:
@@ -686,13 +889,8 @@ class AristonChecker():
                         param_data_changed = True
 
                 if PARAM_DHW_ECONOMY_TEMPERATURE in self._set_param:
-                    if set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"] == self._set_param[
-                        PARAM_DHW_ECONOMY_TEMPERATURE]:
-                        last_set_of_data = max(self._set_time_start[REQUEST_GET_MAIN],
-                                               self._set_time_start[REQUEST_GET_OTHER])
-                        last_read_of_data = max(self._get_time_end[REQUEST_GET_MAIN],
-                                                self._get_time_end[REQUEST_GET_OTHER])
-                        if last_set_of_data < last_read_of_data:
+                    if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] == self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE]:
+                        if self._set_time_start[REQUEST_SET_OTHER] < dhw_temp_time[PARAM_DHW_ECONOMY_TEMPERATURE]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE]
                         else:
@@ -716,7 +914,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_DHW_COMFORT_FUNCTION:
                                 if param_item["value"] == self._set_param[PARAM_DHW_COMFORT_FUNCTION]:
-                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
+                                    if self._set_time_start[REQUEST_SET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_DHW_COMFORT_FUNCTION]
                                     else:
@@ -745,7 +943,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_INTERNET_TIME:
                                 if param_item["value"] == self._set_param[PARAM_INTERNET_TIME]:
-                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
+                                    if self._set_time_start[REQUEST_SET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_INTERNET_TIME]
                                     else:
@@ -774,7 +972,7 @@ class AristonChecker():
                         for param_item in self._ariston_other_data:
                             if param_item["id"] == ARISTON_INTERNET_WEATHER:
                                 if param_item["value"] == self._set_param[PARAM_INTERNET_TIME]:
-                                    if self._set_time_start[REQUEST_GET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
+                                    if self._set_time_start[REQUEST_SET_OTHER] < self._get_time_end[REQUEST_GET_OTHER]:
                                         # value should be up to date and match to remove from setting
                                         del self._set_param[PARAM_INTERNET_WEATHER]
                                     else:
@@ -801,7 +999,8 @@ class AristonChecker():
                 if PARAM_CH_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["zone"]["comfortTemp"]["value"] == self._set_param[
                         PARAM_CH_SET_TEMPERATURE]:
-                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
+                        if self._set_time_start[REQUEST_SET_MAIN] < self._get_time_end[REQUEST_GET_MAIN] and \
+                                self._get_zero_temperature[PARAM_CH_SET_TEMPERATURE] == 0:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_SET_TEMPERATURE]
                         else:
@@ -815,7 +1014,8 @@ class AristonChecker():
                     if set_ch_data != {}:
                         if set_ch_data["comfortTemp"]["value"] == self._set_param[
                             PARAM_CH_COMFORT_TEMPERATURE]:
-                            if self._set_time_start[REQUEST_GET_CH] < self._get_time_end[REQUEST_GET_CH]:
+                            if self._set_time_start[REQUEST_SET_CH] < self._get_time_end[REQUEST_GET_CH] and \
+                                    self._get_zero_temperature[PARAM_CH_COMFORT_TEMPERATURE] == 0:
                                 # value should be up to date and match to remove from setting
                                 del self._set_param[PARAM_CH_COMFORT_TEMPERATURE]
                             else:
@@ -832,7 +1032,8 @@ class AristonChecker():
                     if set_ch_data != {}:
                         if set_ch_data["economyTemp"]["value"] == self._set_param[
                             PARAM_CH_ECONOMY_TEMPERATURE]:
-                            if self._set_time_start[REQUEST_GET_CH] < self._get_time_end[REQUEST_GET_CH]:
+                            if self._set_time_start[REQUEST_SET_CH] < self._get_time_end[REQUEST_GET_CH] and \
+                                    self._get_zero_temperature[PARAM_CH_ECONOMY_TEMPERATURE] == 0:
                                 # value should be up to date and match to remove from setting
                                 del self._set_param[PARAM_CH_ECONOMY_TEMPERATURE]
                             else:
@@ -847,7 +1048,7 @@ class AristonChecker():
 
                 if PARAM_CH_MODE in self._set_param:
                     if set_data["NewValue"]["zone"]["mode"]["value"] == self._set_param[PARAM_CH_MODE]:
-                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
+                        if self._set_time_start[REQUEST_SET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_CH_MODE]
                         else:
@@ -859,7 +1060,7 @@ class AristonChecker():
 
                 if PARAM_DHW_MODE in self._set_param:
                     if set_data["NewValue"]["dhwMode"] == self._set_param[PARAM_DHW_MODE]:
-                        if self._set_time_start[REQUEST_GET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
+                        if self._set_time_start[REQUEST_SET_MAIN] < self._get_time_end[REQUEST_GET_MAIN]:
                             # value should be up to date and match to remove from setting
                             del self._set_param[PARAM_DHW_MODE]
                         else:
@@ -1166,7 +1367,7 @@ def setup(hass, config):
             api_list.append(api)
             api._get_main_data()
             # schedule other data fetching
-            #track_point_in_time(api._hass, api._get_main_data, dt_util.now() + timedelta(seconds=1))
+            # track_point_in_time(api._hass, api._get_main_data, dt_util.now() + timedelta(seconds=1))
             track_point_in_time(api._hass, api._get_other_data, dt_util.now() + timedelta(seconds=20))
             track_point_in_time(api._hass, api._get_ch_data, dt_util.now() + timedelta(seconds=35))
             track_point_in_time(api._hass, api._get_error_data, dt_util.now() + timedelta(seconds=50))

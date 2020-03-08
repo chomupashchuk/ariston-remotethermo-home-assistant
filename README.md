@@ -1,8 +1,13 @@
 # Ariston NET remotethermo integration for Home Assistant
-Thin integration is a side project (my first integration) and was tested only with 1 zone climate. It logs in Ariston website and fetches/sets data on that site. Due to interaction with boiler it is time consuming process and thus intergation is relatively slow.
+Thin integration is a side project (my first integration) and was tested only with 1 zone climate. It logs in to Ariston website and fetches/sets data on that site.
 You are free to modify and distribute it, but it is distributed 'as is' with no liability (see license file).
 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
+
+## Integration slow nature
+In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 13 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 11 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+
 
 ## Integration was tested on:
   - Ariston Clas Evo
@@ -23,7 +28,7 @@ All additional attributes are described in **Integration attributes**
 Localizations are located in corresponding `.json` file within `.translations` folder.
 Localization consists of two main parts:
   - Frontend translation (within corresponding `sensor.__.json` file), which works only with sensors due to functionality limitations. Change of frontend language automatically changes displayed value in frontend.
-  - Backend translation (objects within `backend.__.json` file), which forces translated values to be used during components initilization for `climate` (preset) and `water_heater` (operation). Change of language can only be changed in `configuration.yaml` and is applied during Home Assistant start.
+  - Backend translation (objects within `backend.__.json` file), which forces translated values to be used during components initilization for `climate` (preset) and `water_heater` (operation). Change of language can only be changed in `configuration.yaml` and is applied during Home Assistant start. **Note that services use untranslated data, use velues specified in `services.yaml`!**
 
 **Supported localizations**:
   - `en` - English (default)
