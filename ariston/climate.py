@@ -4,6 +4,7 @@ Adds support for the Ariston Boiler
 import logging
 from datetime import timedelta
 import json
+import os
 
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
@@ -48,6 +49,12 @@ DEFAULT_MIN = 10.0
 DEFAULT_MAX = 30.0
 DEFAULT_TEMP = 0.0
 
+MODE_TO_ICON = {
+    HVAC_MODE_OFF: "ariston_climate_off.png",
+    HVAC_MODE_HEAT: "ariston_climate_manual.png",
+    HVAC_MODE_AUTO: "ariston_climate_program.png"
+}
+
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
 STATE_SCAN_INTERVAL_SECS = 10
 
@@ -85,6 +92,14 @@ class AristonThermostat(ClimateDevice):
         except:
             self._preset_translate = {}
             pass
+
+    @property
+    def entity_picture(self):
+        """Return the entity picture to use in the frontend, if any."""
+        if self.hvac_mode in MODE_TO_ICON:
+                if os.path.isfile('/config/www/icons/' + MODE_TO_ICON[self.hvac_mode]):
+                    return "/local/icons/" + MODE_TO_ICON[self.hvac_mode]
+        return None
 
     @property
     def icon(self):

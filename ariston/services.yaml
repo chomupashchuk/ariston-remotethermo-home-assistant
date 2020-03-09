@@ -7,6 +7,9 @@ set_data:
     mode:
       description: "(Optional) General mode: 'winter' or 'summer' or 'off' or 'heating_only'. Values depend on model."
       example: winter
+    ch_auto_function:
+      description: "(Optional) CH AUTO function (boolean)"
+      example: true
     ch_mode:
       description: "(Optional) CH mode: 'manual' or 'program'."
       example: manual

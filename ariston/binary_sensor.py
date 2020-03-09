@@ -13,6 +13,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from .const import (
     ARISTON_INTERNET_TIME,
     ARISTON_INTERNET_WEATHER,
+    ARISTON_CH_AUTO_FUNCTION,
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
@@ -23,6 +24,7 @@ from .const import (
     PARAM_CHANGING_DATA,
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
+    PARAM_CH_AUTO_FUNCTION,
     BINARY_SENSOR_HOLIDAY_MODE,
     BINARY_SENSOR_ONLINE,
     BINARY_SENSOR_FLAME,
@@ -30,6 +32,7 @@ from .const import (
     BINARY_SENSOR_CHANGING_DATA,
     BINARY_SENSOR_INTERNET_TIME,
     BINARY_SENSOR_INTERNET_WEATHER,
+    BINARY_SENSOR_CH_AUTO_FUNCTION,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -43,6 +46,7 @@ _LOGGER = logging.getLogger(__name__)
 
 # Binary sensor types are defined like: Name, device class
 BINARY_SENSORS = {
+    PARAM_CH_AUTO_FUNCTION: (BINARY_SENSOR_CH_AUTO_FUNCTION, None, "mdi:radiator"),
     PARAM_HOLIDAY_MODE: (BINARY_SENSOR_HOLIDAY_MODE, None, "mdi:island"),
     PARAM_ONLINE: (BINARY_SENSOR_ONLINE, DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: (BINARY_SENSOR_FLAME, DEVICE_CLASS_HEAT, None),
@@ -180,6 +184,17 @@ class AristonBinarySensor(BinarySensorDevice):
                 try:
                     for param_item in self._api._ariston_other_data:
                         if param_item["id"] == ARISTON_INTERNET_WEATHER:
+                            if param_item["value"] == 1:
+                                self._state = True
+                                break
+                except:
+                    pass
+
+            elif self._sensor_type == PARAM_CH_AUTO_FUNCTION:
+                self._state = False
+                try:
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_CH_AUTO_FUNCTION:
                             if param_item["value"] == 1:
                                 self._state = True
                                 break

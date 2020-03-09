@@ -2,6 +2,7 @@
 import logging
 from datetime import timedelta
 import json
+import os
 
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
@@ -60,6 +61,20 @@ SUPPORTED_OPERATIONS_2 = [
     VAL_PROGRAM,
 ]
 
+MODE_TO_ICON = {
+    VAL_OFF: "ariston_water_heater_off.png",
+    VAL_HEATING_ONLY: "ariston_water_heater_off.png",
+    VAL_OFFLINE: "ariston_water_heater_off.png",
+    VAL_SUMMER_MANUAL: "ariston_water_heater_off.png",
+    VAL_SUMMER_PROGRAM: "ariston_water_heater_off.png",
+    VAL_SUMMER: "ariston_water_heater_off.png",
+    VAL_WINTER: "ariston_water_heater_manual.png",
+    VAL_WINTER_MANUAL: "ariston_water_heater_manual.png",
+    VAL_WINTER_PROGRAM: "ariston_water_heater_program.png",
+    VAL_MANUAL: "ariston_water_heater_manual.png",
+    VAL_PROGRAM: "ariston_water_heater_program.png"
+}
+
 _LOGGER = logging.getLogger(__name__)
 
 SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
@@ -95,6 +110,20 @@ class AristonWaterHeater(WaterHeaterDevice):
     def name(self):
         """Return the name of the Climate device."""
         return self._name
+
+    @property
+    def entity_picture(self):
+        """Return the entity picture to use in the frontend, if any."""
+        current_op = self.current_operation
+        for item in self._operations_translate:
+            if self._operations_translate[item] == current_op:
+                # translate operation back to system format
+                current_op = item
+                break
+        if current_op in MODE_TO_ICON:
+            if os.path.isfile('/config/www/icons/' + MODE_TO_ICON[current_op]):
+                return "/local/icons/" + MODE_TO_ICON[current_op]
+        return None
 
     @property
     def icon(self):

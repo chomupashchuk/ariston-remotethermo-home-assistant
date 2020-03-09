@@ -5,8 +5,8 @@ You are free to modify and distribute it, but it is distributed 'as is' with no 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
 
 ## Integration slow nature
-In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 4 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
-Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 7 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 6 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 3.5 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
 Ongoing motitoring of changing configuration can be viewed via binary sensor `changing_data`.
 
 
@@ -85,6 +85,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 #### Binary sensors
+  - `ch_auto_function` = if CH AUTO function is enabled.
   - `changing_data` - if change of data via Home Assistant is ongoing.
   - `flame` - if boiler is heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
@@ -132,6 +133,7 @@ ariston:
     - water_last_365d
     - water_last_7d
   binary_sensors:
+    - ch_auto_function
     - changing_data
     - flame
     - holiday_mode

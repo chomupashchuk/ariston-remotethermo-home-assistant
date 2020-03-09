@@ -10,6 +10,8 @@ from homeassistant.helpers.entity import Entity
 from .const import (
     ARISTON_DHW_COMFORT_FUNCTION,
     ARISTON_SIGNAL_STRENGHT,
+    ARISTON_CH_COMFORT_TEMP,
+    ARISTON_CH_ECONOMY_TEMP,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -268,17 +270,23 @@ class AristonSensor(Entity):
                     pass
 
             elif self._sensor_type == PARAM_CH_COMFORT_TEMPERATURE:
+                self._state = VAL_UNKNOWN
                 try:
-                    self._state = self._api._ariston_ch_data["comfortTemp"]["value"]
-                except KeyError:
-                    self._state = VAL_UNKNOWN
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_CH_COMFORT_TEMP:
+                            self._state = param_item["value"]
+                            break
+                except:
                     pass
 
             elif self._sensor_type == PARAM_CH_ECONOMY_TEMPERATURE:
+                self._state = VAL_UNKNOWN
                 try:
-                    self._state = self._api._ariston_ch_data["economyTemp"]["value"]
-                except KeyError:
-                    self._state = VAL_UNKNOWN
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_CH_ECONOMY_TEMP:
+                            self._state = param_item["value"]
+                            break
+                except:
                     pass
 
             elif self._sensor_type == PARAM_CH_ANTIFREEZE_TEMPERATURE:
