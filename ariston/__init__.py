@@ -103,10 +103,7 @@ MAX_ERRORS_TIMER_EXTEND = 2
 MAX_ZERO_TOLERANCE = 10
 HTTP_RETRY_INTERVAL = 60
 HTTP_RETRY_INTERVAL_DOWN = 90
-HTTP_RETRY_GAS_MULTIPLY = 13
-HTTP_RETRY_ERROR_MULTIPLY = 5
-HTTP_RETRY_CH_MULTIPLY = 7
-HTTP_RETRY_OTHER_MULTIPLY = 3
+HTTP_MULTIPLY = 4
 HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMEOUT_LOGIN = 3
 HTTP_TIMEOUT_GET = 15
@@ -115,8 +112,8 @@ HTTP_TIMEOUT_SET = 15
 HTTP_TIMEOUT_SET_CH = 10
 HTTP_TIMEOUT_SET_PARAM = 10
 HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + HTTP_TIMER_SET_LOCK + 5
-HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_CH_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
-HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_OTHER_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL_CH = HTTP_RETRY_INTERVAL_DOWN * HTTP_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
+HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
 
 UNKNOWN_TEMP = 0.0
 REQUEST_GET_MAIN = "_get_main"
@@ -223,6 +220,7 @@ class AristonChecker():
         self._data_lock = threading.Lock()
         self._device = device
         self._errors = 0
+        self._get_request_number = 0
         self._get_time_start = {
             REQUEST_GET_MAIN: 0,
             REQUEST_GET_CH: 0,
@@ -269,9 +267,9 @@ class AristonChecker():
             REQUEST_SET_OTHER: 0
         }
         self._set_time_end = {
-            REQUEST_GET_MAIN: 0,
-            REQUEST_GET_CH: 0,
-            REQUEST_GET_OTHER: 0
+            REQUEST_SET_MAIN: 0,
+            REQUEST_SET_CH: 0,
+            REQUEST_SET_OTHER: 0
         }
         self._store_file = store_file
         self._token_lock = threading.Lock()
@@ -613,8 +611,25 @@ class AristonChecker():
             else:
                 retry_in = HTTP_RETRY_INTERVAL
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
-            retry_time = dt_util.now() + timedelta(seconds=retry_in)
-            track_point_in_time(self._hass, self._get_main_data, retry_time)
+            # schedule main read
+            track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=retry_in))
+            # schedule other parameters read
+            if self._get_request_number == 0:
+                track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
+            # schedule ch weekly data read
+            elif self._get_request_number == 1:
+                track_point_in_time(self._hass, self._get_ch_data, dt_util.now() + timedelta(seconds=25))
+            # schedule error read, prioritize as second rarest
+            elif self._get_request_number == 2:
+                track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=25))
+            # schedule gas use statistics read as rarest, prioritize it
+            elif self._get_request_number == 3:
+                track_point_in_time(self._hass, self._get_gas_water_data, dt_util.now() + timedelta(seconds=25))
+            # step request counter
+            if self._get_request_number < 3:
+                self._get_request_number += 1
+            else:
+                self._get_request_number = 0
         try:
             self._get_http_data(REQUEST_GET_MAIN)
         except AristonError:
@@ -639,46 +654,18 @@ class AristonChecker():
 
     def _get_gas_water_data(self, dummy=None):
         """Get Ariston gas and water use data from http"""
-        if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-            # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_GAS_MULTIPLY
-        else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_GAS_MULTIPLY
-        retry_time = dt_util.now() + timedelta(seconds=retry_in)
-        track_point_in_time(self._hass, self._get_gas_water_data, retry_time)
         self._get_http_data(REQUEST_GET_GAS)
 
     def _get_error_data(self, dummy=None):
         """Get Ariston error data from http"""
-        if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-            # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_ERROR_MULTIPLY
-        else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_ERROR_MULTIPLY
-        retry_time = dt_util.now() + timedelta(seconds=retry_in)
-        track_point_in_time(self._hass, self._get_error_data, retry_time)
         self._get_http_data(REQUEST_GET_ERROR)
 
     def _get_ch_data(self, dummy=None):
         """Get Ariston CH data from http"""
-        if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-            # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_CH_MULTIPLY
-        else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_CH_MULTIPLY
-        retry_time = dt_util.now() + timedelta(seconds=retry_in)
-        track_point_in_time(self._hass, self._get_ch_data, retry_time)
         self._get_http_data(REQUEST_GET_CH)
 
     def _get_other_data(self, dummy=None):
         """Get Ariston other data from http"""
-        if self._errors >= MAX_ERRORS_TIMER_EXTEND:
-            # give a little rest to the system
-            retry_in = HTTP_RETRY_INTERVAL_DOWN * HTTP_RETRY_OTHER_MULTIPLY
-        else:
-            retry_in = HTTP_RETRY_INTERVAL * HTTP_RETRY_OTHER_MULTIPLY
-        retry_time = dt_util.now() + timedelta(seconds=retry_in)
-        track_point_in_time(self._hass, self._get_other_data, retry_time)
         self._get_http_data(REQUEST_GET_OTHER)
 
     def _setting_http_data(self, set_data, request_type=""):
@@ -1365,13 +1352,10 @@ def setup(hass, config):
             api = AristonChecker(hass, device=device, name=name, username=username, password=password, retries=retries,
                                  store_file=store_file)
             api_list.append(api)
+
+            # start api execution
             api._get_main_data()
-            # schedule other data fetching
-            # track_point_in_time(api._hass, api._get_main_data, dt_util.now() + timedelta(seconds=1))
-            track_point_in_time(api._hass, api._get_other_data, dt_util.now() + timedelta(seconds=20))
-            track_point_in_time(api._hass, api._get_ch_data, dt_util.now() + timedelta(seconds=35))
-            track_point_in_time(api._hass, api._get_error_data, dt_util.now() + timedelta(seconds=50))
-            track_point_in_time(api._hass, api._get_gas_water_data, dt_util.now() + timedelta(seconds=90))
+
         except LoginError as ex:
             _LOGGER.error("Login error for %s: %s", name, ex)
             pass

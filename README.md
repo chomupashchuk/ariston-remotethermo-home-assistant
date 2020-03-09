@@ -5,8 +5,9 @@ You are free to modify and distribute it, but it is distributed 'as is' with no 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
 
 ## Integration slow nature
-In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 13 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
-Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 11 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 4 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 7 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+Ongoing motitoring of changing configuration can be viewed via binary sensor `changing_data`.
 
 
 ## Integration was tested on:
