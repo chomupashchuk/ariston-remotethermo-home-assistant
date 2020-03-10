@@ -1427,8 +1427,9 @@ class AristonChecker():
                         pass
 
                 self._set_new_data_pending = True
-
-            self._preparing_setting_http_data()
+                # set after short delay to not affect switch or climate or water_heater
+                retry_time = dt_util.now() + timedelta(seconds=1)
+                track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
 
         else:
             _LOGGER.warning("%s No valid data fetched from server to set changes", self)

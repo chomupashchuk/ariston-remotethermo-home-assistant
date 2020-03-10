@@ -29,6 +29,7 @@ SENSOR_WATER_LAST_7D = "Gas for Water use in last 7 days"
 SENSOR_WATER_LAST_30D = "Gas for Water use in last 30 days"
 SENSOR_WATER_LAST_365D = "Gas for Water use in last 365 days"
 
+BINARY_SENSOR_CH_FLAME = "CH Flame"
 BINARY_SENSOR_CH_AUTO_FUNCTION = "CH Auto Function"
 BINARY_SENSOR_HOLIDAY_MODE = "Holiday Mode"
 BINARY_SENSOR_ONLINE = "Online"
@@ -37,6 +38,8 @@ BINARY_SENSOR_HEAT_PUMP = "Heat Pump"
 BINARY_SENSOR_CHANGING_DATA = "Changing Data"
 BINARY_SENSOR_INTERNET_TIME = "Internet Time"
 BINARY_SENSOR_INTERNET_WEATHER = "Internet Weather"
+
+SWITCH_POWER = "Power"
 
 VAL_HOLIDAY = "holiday"
 VAL_WINTER = "winter"
@@ -103,6 +106,7 @@ PARAM_WATER_LAST_365D = "water_last_365d"
 
 # binary sensors
 PARAM_CH_AUTO_FUNCTION = "ch_auto_function"
+PARAM_CH_FLAME = "ch_flame"
 PARAM_FLAME = "flame"
 PARAM_HEAT_PUMP = "heat_pump"
 PARAM_HOLIDAY_MODE = "holiday_mode"
@@ -110,6 +114,9 @@ PARAM_INTERNET_TIME = "internet_time"
 PARAM_INTERNET_WEATHER = "internet_weather"
 PARAM_ONLINE = "online"
 PARAM_CHANGING_DATA = "changing_data"
+
+# switches
+PARAM_POWER = "power"
 
 ARISTON_DHW_COMFORT_TEMP = "U6_9_0"
 ARISTON_DHW_COMFORT_FUNCTION = "U6_9_2"

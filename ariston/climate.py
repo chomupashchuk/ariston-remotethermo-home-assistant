@@ -205,9 +205,7 @@ class AristonThermostat(ClimateDevice):
         try:
             climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
             if climate_mode != VAL_OFF:
-                if self._api._ariston_data["zone"]["heatRequest"] == True:
-                    curr_hvac_action = CURRENT_HVAC_HEAT
-                elif self._api._ariston_data["flameSensor"] == True and self._api._ariston_data["flameForDhw"] != True:
+                if self._api._ariston_data["zone"]["heatRequest"]:
                     curr_hvac_action = CURRENT_HVAC_HEAT
                 else:
                     curr_hvac_action = CURRENT_HVAC_IDLE

@@ -6,15 +6,24 @@ from homeassistant.const import CONF_SWITCHES, CONF_NAME
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
+    ARISTON_INTERNET_TIME,
+    ARISTON_INTERNET_WEATHER,
+    ARISTON_CH_AUTO_FUNCTION,
     CONF_POWER_ON,
     DATA_ARISTON,
     DEVICES,
     PARAM_MODE,
     SERVICE_UPDATE,
-    VAL_SUMMER,
     VAL_OFF,
-    VAL_WINTER,
     VALUE_TO_MODE,
+    PARAM_INTERNET_TIME,
+    PARAM_INTERNET_WEATHER,
+    PARAM_POWER,
+    PARAM_CH_AUTO_FUNCTION,
+    SWITCH_POWER,
+    BINARY_SENSOR_INTERNET_TIME,
+    BINARY_SENSOR_INTERNET_WEATHER,
+    BINARY_SENSOR_CH_AUTO_FUNCTION,
 )
 from .helpers import service_signal
 
@@ -22,10 +31,11 @@ STATE_SCAN_INTERVAL_SECS = 3
 
 SCAN_INTERVAL = timedelta(seconds=STATE_SCAN_INTERVAL_SECS)
 
-POWER = "power"
-
 SWITCHES = {
-    POWER: ("Power", "mdi:power"),
+    PARAM_POWER: (SWITCH_POWER, "mdi:power"),
+    PARAM_INTERNET_TIME: (BINARY_SENSOR_INTERNET_TIME, "mdi:update"),
+    PARAM_INTERNET_WEATHER: (BINARY_SENSOR_INTERNET_WEATHER, "mdi:weather-partly-cloudy"),
+    PARAM_CH_AUTO_FUNCTION: (BINARY_SENSOR_CH_AUTO_FUNCTION, "mdi:radiator"),
 }
 
 
@@ -82,47 +92,50 @@ class AristonSwitch(SwitchDevice):
     def is_on(self):
         """Return true if switch is on."""
         try:
-            climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
-            if self._switch_type == POWER:
+            status_on = False
+            if self._switch_type == PARAM_POWER:
+                climate_mode = VALUE_TO_MODE[self._api._ariston_data["mode"]]
                 if climate_mode == VAL_OFF:
                     status_on = False
                 else:
                     status_on = True
-            else:
-                status_on = False
+            elif self._switch_type == PARAM_INTERNET_TIME:
+                for param_item in self._api._ariston_other_data:
+                    if param_item["id"] == ARISTON_INTERNET_TIME:
+                        if param_item["value"] == 1:
+                            status_on = True
+                            break
+            elif self._switch_type == PARAM_INTERNET_WEATHER:
+                for param_item in self._api._ariston_other_data:
+                    if param_item["id"] == ARISTON_INTERNET_WEATHER:
+                        if param_item["value"] == 1:
+                            status_on = True
+                            break
+            elif self._switch_type == PARAM_CH_AUTO_FUNCTION:
+                for param_item in self._api._ariston_other_data:
+                    if param_item["id"] == ARISTON_CH_AUTO_FUNCTION:
+                        if param_item["value"] == 1:
+                            status_on = True
+                            break
         except:
             status_on = False
+            pass
         return status_on
 
     def turn_on(self, **kwargs):
         """Turn the switch on."""
-        try:
-            if self._switch_type == POWER:
-                self._api._set_http_data({PARAM_MODE: self._api._device[CONF_POWER_ON]})
-        except:
-            pass
+        if self._switch_type == PARAM_POWER:
+            self._api.set_http_data({PARAM_MODE: self._api._device[CONF_POWER_ON]})
+        elif self._switch_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER, PARAM_CH_AUTO_FUNCTION]:
+            self._api.set_http_data({self._switch_type: "true"})
 
     def turn_off(self, **kwargs):
         """Turn the device off."""
-        if self._switch_type == POWER:
-            self._api._set_http_data({PARAM_MODE: VAL_OFF})
+        if self._switch_type == PARAM_POWER:
+            self._api.set_http_data({PARAM_MODE: VAL_OFF})
+        elif self._switch_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER, PARAM_CH_AUTO_FUNCTION]:
+            self._api.set_http_data({self._switch_type: "false"})
 
     def update(self):
         """Update data"""
         return
-
-    async def async_on_demand_update(self):
-        """Update state."""
-        self.async_schedule_update_ha_state(True)
-
-    async def async_added_to_hass(self):
-        """Subscribe to update signal."""
-        self._unsub_dispatcher = async_dispatcher_connect(
-            self.hass,
-            service_signal(SERVICE_UPDATE, self._signal_name),
-            self.async_on_demand_update,
-        )
-
-    async def async_will_remove_from_hass(self):
-        """Disconnect from update signal."""
-        self._unsub_dispatcher()

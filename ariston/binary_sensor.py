@@ -25,6 +25,7 @@ from .const import (
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
     PARAM_CH_AUTO_FUNCTION,
+    PARAM_CH_FLAME,
     BINARY_SENSOR_HOLIDAY_MODE,
     BINARY_SENSOR_ONLINE,
     BINARY_SENSOR_FLAME,
@@ -33,6 +34,7 @@ from .const import (
     BINARY_SENSOR_INTERNET_TIME,
     BINARY_SENSOR_INTERNET_WEATHER,
     BINARY_SENSOR_CH_AUTO_FUNCTION,
+    BINARY_SENSOR_CH_FLAME,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -47,9 +49,10 @@ _LOGGER = logging.getLogger(__name__)
 # Binary sensor types are defined like: Name, device class
 BINARY_SENSORS = {
     PARAM_CH_AUTO_FUNCTION: (BINARY_SENSOR_CH_AUTO_FUNCTION, None, "mdi:radiator"),
+    PARAM_CH_FLAME: (BINARY_SENSOR_CH_FLAME, None, "mdi:fire"),
     PARAM_HOLIDAY_MODE: (BINARY_SENSOR_HOLIDAY_MODE, None, "mdi:island"),
     PARAM_ONLINE: (BINARY_SENSOR_ONLINE, DEVICE_CLASS_CONNECTIVITY, None),
-    PARAM_FLAME: (BINARY_SENSOR_FLAME, DEVICE_CLASS_HEAT, None),
+    PARAM_FLAME: (BINARY_SENSOR_FLAME, None, "mdi:fire"),
     PARAM_HEAT_PUMP: (BINARY_SENSOR_HEAT_PUMP, DEVICE_CLASS_HEAT, None),
     PARAM_CHANGING_DATA: (BINARY_SENSOR_CHANGING_DATA, None, "mdi:cogs"),
     PARAM_INTERNET_TIME: (BINARY_SENSOR_INTERNET_TIME, None, "mdi:update"),
@@ -199,6 +202,13 @@ class AristonBinarySensor(BinarySensorDevice):
                                 self._state = True
                                 break
                 except:
+                    pass
+
+            elif self._sensor_type == PARAM_CH_FLAME:
+                try:
+                    self._state = self._api._ariston_data["zone"]["heatRequest"]
+                except:
+                    self._state = False
                     pass
 
         except AristonError as error:

@@ -54,6 +54,9 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).
+  - `internet_time` - turn off and on sync with internet time.
+  - `internet_weather` - turn off and on fetching of weather from internet.
+  - `ch_auto_function` - turn off and on Auto function.
 
 #### Sensors
   - `ch_account_gas` - gas use summary for CH. Not supported on all models.
@@ -85,9 +88,10 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `water_last_7d` - water use in last 365 days. Not supported on all models.
 
 #### Binary sensors
-  - `ch_auto_function` = if CH AUTO function is enabled.
+  - `ch_auto_function` - if CH AUTO function is enabled.
+  - `ch_flame` - if CH heating is ongoing.
   - `changing_data` - if change of data via Home Assistant is ongoing.
-  - `flame` - if boiler is heating water (DHW or CH).
+  - `flame` - if any type of heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
   - `holiday_mode` - if holiday mode switch on via application or site.
   - `internet_time` - if time from the internet is used.
@@ -104,6 +108,9 @@ ariston:
   localization: 'pl'
   switches:
     - power
+    - internet_time
+    - internet_weather
+    - ch_auto_function
   sensors:
     - ch_account_gas
     - ch_antifreeze_temperature
@@ -134,6 +141,7 @@ ariston:
     - water_last_7d
   binary_sensors:
     - ch_auto_function
+    - ch_flame
     - changing_data
     - flame
     - holiday_mode
