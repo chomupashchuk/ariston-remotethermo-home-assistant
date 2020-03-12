@@ -17,7 +17,10 @@ from .const import (
     DEVICES,
     SERVICE_UPDATE,
     DHW_COMFORT_VALUE_TO_FUNCT,
-    PARAM_CH_ACCOUNT_GAS,
+    PARAM_ACCOUNT_CH_GAS,
+    PARAM_ACCOUNT_CH_ELECTRICITY,
+    PARAM_ACCOUNT_DHW_GAS,
+    PARAM_ACCOUNT_DHW_ELECTRICITY,
     PARAM_CH_ANTIFREEZE_TEMPERATURE,
     PARAM_CH_MODE,
     PARAM_CH_SET_TEMPERATURE,
@@ -26,7 +29,6 @@ from .const import (
     PARAM_CH_DETECTED_TEMPERATURE,
     PARAM_CH_PROGRAM,
     PARAM_ERRORS,
-    PARAM_DHW_ACCOUNT_GAS,
     PARAM_DHW_COMFORT_FUNCTION,
     PARAM_DHW_MODE,
     PARAM_DHW_SET_TEMPERATURE,
@@ -60,7 +62,10 @@ from .const import (
     VALUE_TO_CH_MODE,
     VALUE_TO_DHW_MODE,
     VALUE_TO_MODE,
-    SENSOR_CH_ACCOUNT_GAS,
+    SENSOR_ACCOUNT_CH_GAS,
+    SENSOR_ACCOUNT_CH_ELECTRICITY,
+    SENSOR_ACCOUNT_DHW_GAS,
+    SENSOR_ACCOUNT_DHW_ELECTRICITY,
     SENSOR_CH_ANTIFREEZE_TEMPERATURE,
     SENSOR_CH_DETECTED_TEMPERATURE,
     SENSOR_CH_MODE,
@@ -68,7 +73,6 @@ from .const import (
     SENSOR_CH_PROGRAM,
     SENSOR_CH_COMFORT_TEMPERATURE,
     SENSOR_CH_ECONOMY_TEMPERATURE,
-    SENSOR_DHW_ACCOUNT_GAS,
     SENSOR_DHW_COMFORT_FUNCTION,
     SENSOR_DHW_SET_TEMPERATURE,
     SENSOR_DHW_STORAGE_TEMPERATURE,
@@ -108,7 +112,10 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sensor types are defined like: Name, units, icon
 SENSORS = {
-    PARAM_CH_ACCOUNT_GAS: [SENSOR_CH_ACCOUNT_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_CH_GAS: [SENSOR_ACCOUNT_CH_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_DHW_GAS: [SENSOR_ACCOUNT_DHW_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_CH_ELECTRICITY: [SENSOR_ACCOUNT_CH_ELECTRICITY, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_DHW_ELECTRICITY: [SENSOR_ACCOUNT_DHW_ELECTRICITY, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_MODE: [SENSOR_CH_MODE, None, {
@@ -121,7 +128,6 @@ SENSORS = {
     PARAM_CH_PROGRAM: [SENSOR_CH_PROGRAM, None, {DEFAULT_ICON: "mdi:calendar-month"}],
     PARAM_CH_COMFORT_TEMPERATURE: [SENSOR_CH_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
     PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
-    PARAM_DHW_ACCOUNT_GAS: [SENSOR_DHW_ACCOUNT_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
     PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, {
         DEFAULT_ICON: "mdi:water-pump-off",
         VAL_DISABLED: "mdi:water-pump-off",
@@ -239,15 +245,19 @@ class AristonSensor(Entity):
             return self._api.available and self._api._ariston_error_data != {}
         elif self._sensor_type in [PARAM_CH_PROGRAM]:
             return self._api.available and self._api._ariston_ch_data != {}
-        elif self._sensor_type in [PARAM_DHW_ACCOUNT_GAS,
-                                   PARAM_CH_ACCOUNT_GAS,
-                                   PARAM_HEATING_LAST_24H,
-                                   PARAM_HEATING_LAST_7d,
-                                   PARAM_HEATING_LAST_30d,
-                                   PARAM_HEATING_LAST_365d,
-                                   PARAM_WATER_LAST_24H,
-                                   PARAM_WATER_LAST_7D, PARAM_WATER_LAST_30D,
-                                   PARAM_WATER_LAST_365D]:
+        elif self._sensor_type in [
+            PARAM_ACCOUNT_CH_GAS,
+            PARAM_ACCOUNT_CH_ELECTRICITY,
+            PARAM_ACCOUNT_DHW_GAS,
+            PARAM_ACCOUNT_DHW_ELECTRICITY,
+            PARAM_HEATING_LAST_24H,
+            PARAM_HEATING_LAST_7d,
+            PARAM_HEATING_LAST_30d,
+            PARAM_HEATING_LAST_365d,
+            PARAM_WATER_LAST_24H,
+            PARAM_WATER_LAST_7D,
+            PARAM_WATER_LAST_30D,
+            PARAM_WATER_LAST_365D]:
             return self._api.available and self._api._ariston_gas_data != {}
         elif self._sensor_type in [PARAM_DHW_COMFORT_FUNCTION,
                                    PARAM_SIGNAL_STRENGTH]:
@@ -367,16 +377,30 @@ class AristonSensor(Entity):
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_CH_ACCOUNT_GAS:
+            elif self._sensor_type == PARAM_ACCOUNT_CH_GAS:
                 try:
                     self._state = self._api._ariston_gas_data["account"]["gasHeat"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass
 
-            elif self._sensor_type == PARAM_DHW_ACCOUNT_GAS:
+            elif self._sensor_type == PARAM_ACCOUNT_DHW_GAS:
                 try:
                     self._state = self._api._ariston_gas_data["account"]["gasDhw"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+                    pass
+
+            elif self._sensor_type == PARAM_ACCOUNT_CH_ELECTRICITY:
+                try:
+                    self._state = self._api._ariston_gas_data["account"]["elecHeat"]
+                except KeyError:
+                    self._state = VAL_UNKNOWN
+                    pass
+
+            elif self._sensor_type == PARAM_ACCOUNT_DHW_ELECTRICITY:
+                try:
+                    self._state = self._api._ariston_gas_data["account"]["elecDhw"]
                 except KeyError:
                     self._state = VAL_UNKNOWN
                     pass

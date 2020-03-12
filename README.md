@@ -13,6 +13,7 @@ Ongoing motitoring of changing configuration can be viewed via binary sensor `ch
 ## Integration was tested on:
   - Ariston Clas Evo
   - Ariston Genus One with Ariston BCH cylinder
+  - Ariston Nimbus Flex
 
 ## Integration installation
 In `/config` folder create `custom_components` folder and load source files folder `ariston` in it
@@ -59,7 +60,10 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `ch_auto_function` - turn off and on Auto function.
 
 #### Sensors
-  - `ch_account_gas` - gas use summary for CH. Not supported on all models.
+  - `account_ch_gas` - gas use summary for CH. Not supported on all models.
+  - `account_ch_electricity` - electricity use summary for CH. Not supported on all models.
+  - `account_dhw_gas` - gas use summary for DHW. Not supported on all models.
+  - `account_dhw_electricity` - electricity use summary for DHW. Not supported on all models.
   - `ch_antifreeze_temperature` - CH antifreeze temperature.
   - `ch_detected_temperature` - temperature measured by thermostat.
   - `ch_mode` - mode of CH (`manual` or `scheduled` and others).
@@ -67,7 +71,6 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `ch_economy_temperature` - CH economy temperature.
   - `ch_set_temperature` - set CH temperature.
   - `ch_program` - CH Time Program.
-  - `dhw_account_gas` - gas use summary for DHW. Not supported on all models.
   - `dhw_comfort_function` - DHW comfort function.
   - `dhw_mode` - mode of DHW. Not supported on all models.
   - `dhw_comfort_temperature` - DHW storage comfort temperature. Not supported on all models.
@@ -75,17 +78,17 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `dhw_set_temperature` - set DHW temperature.
   - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
   - `errors` - active errors (no errors to test on)
-  - `heating_last_24h` - gas use in last 24 hours. Not supported on all models.
-  - `heating_last_30d` - gas use in last 7 days. Not supported on all models.
-  - `heating_last_365d` - gas use in last 30 days. Not supported on all models.
-  - `heating_last_7d` - gas use in last 365 days. Not supported on all models.
+  - `heating_last_24h` - energy use for heating in last 24 hours. Not supported on all models.
+  - `heating_last_30d` - energy use for heating in last 7 days. Not supported on all models.
+  - `heating_last_365d` - energy use for heating in last 30 days. Not supported on all models.
+  - `heating_last_7d` - energy use for heating in last 365 days. Not supported on all models.
   - `mode` - mode of boiler (`off` or `summer` or `winter` and others).
   - `outside_temperature` - outside temperature. Not supported on all models.
   - `signal_strength` - Wifi signal strength.
-  - `water_last_24h` - water use in last 24 hours. Not supported on all models.
-  - `water_last_30d` - water use in last 7 days. Not supported on all models.
-  - `water_last_365d` - water use in last 30 days. Not supported on all models.
-  - `water_last_7d` - water use in last 365 days. Not supported on all models.
+  - `water_last_24h` - energy use for water in last 24 hours. Not supported on all models.
+  - `water_last_30d` - energy use for water in last 7 days. Not supported on all models.
+  - `water_last_365d` - energy use for water in last 30 days. Not supported on all models.
+  - `water_last_7d` - energy use for water in last 365 days. Not supported on all models.
 
 #### Binary sensors
   - `ch_auto_function` - if CH AUTO function is enabled.
@@ -112,7 +115,10 @@ ariston:
     - internet_weather
     - ch_auto_function
   sensors:
-    - ch_account_gas
+    - account_ch_gas
+    - account_ch_electricity
+    - account_dhw_gas
+    - account_dhw_electricity
     - ch_antifreeze_temperature
     - ch_detected_temperature
     - ch_mode
@@ -120,7 +126,6 @@ ariston:
     - ch_economy_temperature
     - ch_set_temperature
     - ch_program
-    - dhw_account_gas
     - dhw_comfort_function
     - dhw_mode
     - dhw_comfort_temperature
