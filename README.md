@@ -7,7 +7,7 @@ Cimate and Water Heater components have presets to switch between `off`, `summer
 ## Integration slow nature
 In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 6 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
 Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 3.5 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
-Ongoing motitoring of changing configuration can be viewed via binary sensor `changing_data`.
+Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
 ## Integration was tested on:
@@ -170,3 +170,20 @@ data:
     entity_id: 'climate.ariston'
     ch_comfort_temperature: 20.5
 ```
+
+## New sensors/services requests
+Since i use scanning of http requests towards web application and web application provides only data supported by hardware, i can mainly test what my hardwre supports, which is very limited. So if you would like new sensors or service attributes please follow guides below. 
+
+### Sensors based on already fetched data from remote server
+  - Set `store_config_files` to `true` in `configuration.yaml` to generate files within `/config` folder based on received data from the server.
+  - after Home Assistant restart (when option to generate files is enabled) wait for files `data_..._get_main.json`, `data_..._get_param.json` and `data_..._get_gas.json` to be generated. Store files locally, they keep latest configuration.
+  - change parameter (you are interested in) remotely and wait for new version of files to be generated (check either modification time, or delete old ones and wait for creation of new ones). Compare old and new files with same names to see if parameter is reported as changed.
+  - send me information on file name, sensor name (and short description) and parameter in json file that represents parameter. If parameter has values different from true/false (for example 0, 1 ,5) please provide meaning behind each value. If my hardware does not support it i have no idea how it should be represented.
+
+### Sensors to be based on new requests (if not covered by previous)
+This case requires more actions. Since my web application does not show more options due to heater caopabilities support, there are few options:
+  - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and when you refresh parameters in web application from browser request is being sent to the server. You need to find corresponding request (header request) and reply (json format). And within this json reply identify corresponding sensor you are interetsed in. I'll try to prepare some guide.
+  - provide me with login and password to do it myself with your heater (once again, my heater has limited capabilities and web version shows less data) and change password afterwards when i have fond corresponding requests. **Never share your password with strangers**
+  
+### New service request attributes
+This is similar case to sensors based on new requests, but you need to find post request with corresponding data and provide me with infomrtion regarding headers and json request format.
