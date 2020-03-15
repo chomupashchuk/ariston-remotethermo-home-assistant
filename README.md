@@ -174,18 +174,18 @@ data:
 ```
 
 ## New sensors/services requests
-Since i use scanning of http requests towards web application and web application provides only data supported by hardware, i can mainly test what my hardwre supports, which is very limited. So if you would like new sensors or service attributes please follow guides below. 
+Since I use scanning of http requests towards web application, and web application provides only data supported by hardware, I can only test what my hardwre supports, which is very limited. So if you would like new sensors or service attributes please follow guides below. 
 
 ### Sensors based on already fetched data from remote server
   - Set `store_config_files` to `true` in `configuration.yaml` to generate files within `/config` folder based on received data from the server.
-  - after Home Assistant restart (when option to generate files is enabled) wait for files `data_..._get_main.json`, `data_..._get_param.json` and `data_..._get_gas.json` to be generated. Store files locally, they keep latest configuration.
-  - change parameter (you are interested in) remotely and wait for new version of files to be generated (check either modification time, or delete old ones and wait for creation of new ones). Compare old and new files with same names to see if parameter is reported as changed.
-  - send me information on file name, sensor name (and short description) and parameter in json file that represents parameter. If parameter has values different from true/false (for example 0, 1 ,5) please provide meaning behind each value. If my hardware does not support it i have no idea how it should be represented.
+  - after Home Assistant restart wait for files `data_..._get_main.json`, `data_..._get_param.json` and `data_..._get_gas.json` to be generated. Store files locally, within the files is the latest configuration.
+  - change parameter that you are interested in remotely (via Ariston web or androind or by other means) and wait for new version of files to be generated (either check modification time or delete old files within `/config` and wait for creation of new files). Compare old and new files with same names to see if parameter is reported as changed.
+  - send me information on file name, sensor name (and short description) and parameter in json file that represents parameter. If parameter has values different from ON/OFF or TRUE/FALSE (for example 0, 1 ,5) please provide meaning behind each value. If my hardware does not support values i have no idea of how it should be represented.
 
-### Sensors to be based on new requests (if not covered by previous)
-This case requires more actions. Since my web application does not show more options due to heater caopabilities support, there are few options:
-  - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and when you refresh parameters in web application from browser request is being sent to the server. You need to find corresponding request (header request) and reply (json format). And within this json reply identify corresponding sensor you are interetsed in. See `Guide_for_new_requests.doc` for details.
-  - provide me with login and password to do it myself with your heater (once again, my heater has limited capabilities and web version shows less data) and change password afterwards when i have fond corresponding requests. **Never share your password with strangers**
+### Sensors to be based on new requests (if cannot be covered by previous)
+Since my web application does not show more options due to heater caopabilities support, there are few options:
+  - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and follow `Guide_for_new_requests.doc`.
+  - **Never share your password with strangers**. Provide me with login and password to do everything myself with your heater and change password after i have fond corresponding requests. 
   
-### New service request attributes
-This is similar case to sensors based on new requests, but you need to find post request with corresponding data and provide me with infomrtion regarding headers and json request format. See `Guide_for_new_requests.doc` for details.
+### New service request attributes or switches
+This is similar case to the sensors based on new requests, see `Guide_for_new_requests.doc` for details.
