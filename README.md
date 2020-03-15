@@ -182,8 +182,8 @@ Since i use scanning of http requests towards web application and web applicatio
 
 ### Sensors to be based on new requests (if not covered by previous)
 This case requires more actions. Since my web application does not show more options due to heater caopabilities support, there are few options:
-  - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and when you refresh parameters in web application from browser request is being sent to the server. You need to find corresponding request (header request) and reply (json format). And within this json reply identify corresponding sensor you are interetsed in. I'll try to prepare some guide.
+  - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and when you refresh parameters in web application from browser request is being sent to the server. You need to find corresponding request (header request) and reply (json format). And within this json reply identify corresponding sensor you are interetsed in. See `Guide_for_new_requests.doc` for details.
   - provide me with login and password to do it myself with your heater (once again, my heater has limited capabilities and web version shows less data) and change password afterwards when i have fond corresponding requests. **Never share your password with strangers**
   
 ### New service request attributes
-This is similar case to sensors based on new requests, but you need to find post request with corresponding data and provide me with infomrtion regarding headers and json request format.
+This is similar case to sensors based on new requests, but you need to find post request with corresponding data and provide me with infomrtion regarding headers and json request format. See `Guide_for_new_requests.doc` for details.
