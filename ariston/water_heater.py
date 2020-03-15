@@ -220,6 +220,12 @@ class AristonWaterHeater(WaterHeaterDevice):
         return 1.0
 
     @property
+    def device_state_attributes(self):
+        """Return the supported step of target temperature."""
+        data = {"target_temp_step": 1.0}
+        return data
+
+    @property
     def operation_list(self):
         """List of available operation modes."""
         op_list = []
