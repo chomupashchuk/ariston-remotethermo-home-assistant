@@ -703,8 +703,13 @@ class AristonChecker():
                 # parameters being set, ask more frequently
                 track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
             else:
+                if self._get_request_number == 0:
+                    # schedule other parameters read every second request
+                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=35))
+                    # schedule unit data every first request loop
+                    track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
                 # schedule other parameters read every second request
-                if self._get_request_number % 2 == 0:
+                elif self._get_request_number % 2 == 0:
                     track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
                 # schedule error read
                 elif self._get_request_number == 1:
@@ -715,9 +720,6 @@ class AristonChecker():
                 # schedule gas use statistics read
                 elif self._get_request_number == 5:
                     track_point_in_time(self._hass, self._get_gas_water_data, dt_util.now() + timedelta(seconds=25))
-                # schedule unit data every first request loop
-                if self._get_request_number == 0:
-                    track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=35))
                 # step request counter
                 if self._get_request_number < 5:
                     self._get_request_number += 1
