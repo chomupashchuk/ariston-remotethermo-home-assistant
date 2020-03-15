@@ -704,9 +704,9 @@ class AristonChecker():
                 track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
             else:
                 if self._get_request_number == 0:
-                    # schedule other parameters read every second request
-                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=35))
-                    # schedule unit data every first request loop
+                    # schedule other parameters read
+                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=40))
+                    # schedule unit data read
                     track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
                 # schedule other parameters read every second request
                 elif self._get_request_number % 2 == 0:
