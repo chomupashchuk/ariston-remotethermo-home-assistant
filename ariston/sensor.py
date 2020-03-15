@@ -1,7 +1,7 @@
 """Suppoort for Ariston sensors."""
 import logging
-from datetime import timedelta
 import os
+from datetime import timedelta
 
 from homeassistant.const import CONF_NAME, CONF_SENSORS
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -46,6 +46,7 @@ from .const import (
     PARAM_WATER_LAST_7D,
     PARAM_WATER_LAST_30D,
     PARAM_WATER_LAST_365D,
+    PARAM_UNITS,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_OFF,
@@ -62,6 +63,9 @@ from .const import (
     VALUE_TO_CH_MODE,
     VALUE_TO_DHW_MODE,
     VALUE_TO_MODE,
+    VALUE_TO_UNIT,
+    VAL_METRIC,
+    VAL_IMPERIAL,
     SENSOR_ACCOUNT_CH_GAS,
     SENSOR_ACCOUNT_CH_ELECTRICITY,
     SENSOR_ACCOUNT_DHW_GAS,
@@ -91,11 +95,13 @@ from .const import (
     SENSOR_WATER_LAST_7D,
     SENSOR_WATER_LAST_30D,
     SENSOR_WATER_LAST_365D,
+    SENSOR_UNITS,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
 
 DEFAULT_ICON = "default_icon"
+DEFAULT_UNIT = 0
 MODE_TO_ICON = {
     VAL_OFF: "ariston_off.png",
     VAL_WINTER: "ariston_water_and_heating.png",
@@ -112,32 +118,43 @@ _LOGGER = logging.getLogger(__name__)
 
 # Sensor types are defined like: Name, units, icon
 SENSORS = {
-    PARAM_ACCOUNT_CH_GAS: [SENSOR_ACCOUNT_CH_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_ACCOUNT_DHW_GAS: [SENSOR_ACCOUNT_DHW_GAS, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_ACCOUNT_CH_ELECTRICITY: [SENSOR_ACCOUNT_CH_ELECTRICITY, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_ACCOUNT_DHW_ELECTRICITY: [SENSOR_ACCOUNT_DHW_ELECTRICITY, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
-    PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_ACCOUNT_CH_GAS: [SENSOR_ACCOUNT_CH_GAS, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_DHW_GAS: [SENSOR_ACCOUNT_DHW_GAS, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_CH_ELECTRICITY: [SENSOR_ACCOUNT_CH_ELECTRICITY, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"},
+                                   {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ACCOUNT_DHW_ELECTRICITY: [SENSOR_ACCOUNT_DHW_ELECTRICITY, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"},
+                                    {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_CH_ANTIFREEZE_TEMPERATURE: [SENSOR_CH_ANTIFREEZE_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                      {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_CH_DETECTED_TEMPERATURE: [SENSOR_CH_DETECTED_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                    {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_CH_MODE: [SENSOR_CH_MODE, None, {
         DEFAULT_ICON: "mdi:radiator-off",
         VAL_MANUAL: "mdi:hand",
         VAL_PROGRAM: "mdi:clock-outline",
         VAL_LEARNING: "mdi:mdi:head-cog-outline"
     }],
-    PARAM_CH_SET_TEMPERATURE: [SENSOR_CH_SET_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
+    PARAM_CH_SET_TEMPERATURE: [SENSOR_CH_SET_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                               {DEFAULT_ICON: "mdi:radiator"}],
     PARAM_CH_PROGRAM: [SENSOR_CH_PROGRAM, None, {DEFAULT_ICON: "mdi:calendar-month"}],
-    PARAM_CH_COMFORT_TEMPERATURE: [SENSOR_CH_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
-    PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:radiator"}],
+    PARAM_CH_COMFORT_TEMPERATURE: [SENSOR_CH_COMFORT_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                   {DEFAULT_ICON: "mdi:radiator"}],
+    PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                   {DEFAULT_ICON: "mdi:radiator"}],
     PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, {
         DEFAULT_ICON: "mdi:water-pump-off",
         VAL_DISABLED: "mdi:water-pump-off",
         VAL_TIME_BASED: "mdi:clock-outline",
         VAL_ALWAYS_ACTIVE: "mdi:water-pump"
     }],
-    PARAM_DHW_SET_TEMPERATURE: [SENSOR_DHW_SET_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
-    PARAM_DHW_STORAGE_TEMPERATURE: [SENSOR_DHW_STORAGE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
-    PARAM_DHW_COMFORT_TEMPERATURE: [SENSOR_DHW_COMFORT_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
-    PARAM_DHW_ECONOMY_TEMPERATURE: [SENSOR_DHW_ECONOMY_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:water-pump"}],
+    PARAM_DHW_SET_TEMPERATURE: [SENSOR_DHW_SET_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                {DEFAULT_ICON: "mdi:water-pump"}],
+    PARAM_DHW_STORAGE_TEMPERATURE: [SENSOR_DHW_STORAGE_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                    {DEFAULT_ICON: "mdi:water-pump"}],
+    PARAM_DHW_COMFORT_TEMPERATURE: [SENSOR_DHW_COMFORT_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                    {DEFAULT_ICON: "mdi:water-pump"}],
+    PARAM_DHW_ECONOMY_TEMPERATURE: [SENSOR_DHW_ECONOMY_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                    {DEFAULT_ICON: "mdi:water-pump"}],
     PARAM_DHW_MODE: [SENSOR_DHW_MODE, None, {
         DEFAULT_ICON: "mdi:water-pump-off",
         VAL_MANUAL: "mdi:hand",
@@ -148,10 +165,11 @@ SENSORS = {
         DEFAULT_ICON: "mdi:alert-outline",
         0: "mdi:shield-check"
     }],
-    PARAM_HEATING_LAST_24H: [SENSOR_HEATING_LAST_24H, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_HEATING_LAST_7d: [SENSOR_HEATING_LAST_7d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_24H: [SENSOR_HEATING_LAST_24H, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_7d: [SENSOR_HEATING_LAST_7d, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_30d: [SENSOR_HEATING_LAST_30d, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_HEATING_LAST_365d: [SENSOR_HEATING_LAST_365d, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"},
+                              {DEFAULT_ICON: "mdi:cash"}],
     PARAM_MODE: [SENSOR_MODE, None, {
         DEFAULT_ICON: "mdi:water-boiler-off",
         VAL_WINTER: "mdi:snowflake",
@@ -159,12 +177,14 @@ SENSORS = {
         VAL_HEATING_ONLY: "mdi:mdi:radiator",
         VAL_OFF: "mdi:water-boiler-off"
     }],
-    PARAM_OUTSIDE_TEMPERATURE: [SENSOR_OUTSIDE_TEMPERATURE, '°C', {DEFAULT_ICON: "mdi:thermometer"}],
+    PARAM_OUTSIDE_TEMPERATURE: [SENSOR_OUTSIDE_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
+                                {DEFAULT_ICON: "mdi:thermometer"}],
     PARAM_SIGNAL_STRENGTH: [SENSOR_SIGNAL_STRENGTH, '%', {DEFAULT_ICON: "mdi:signal"}],
-    PARAM_WATER_LAST_24H: [SENSOR_WATER_LAST_24H, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_WATER_LAST_7D: [SENSOR_WATER_LAST_7D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_WATER_LAST_30D: [SENSOR_WATER_LAST_30D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
-    PARAM_WATER_LAST_365D: [SENSOR_WATER_LAST_365D, 'kWh', {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_24H: [SENSOR_WATER_LAST_24H, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_7D: [SENSOR_WATER_LAST_7D, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_30D: [SENSOR_WATER_LAST_30D, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_WATER_LAST_365D: [SENSOR_WATER_LAST_365D, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_UNITS: [SENSOR_UNITS, None, {DEFAULT_ICON: "mdi:scale-balance"}],
 }
 
 
@@ -236,7 +256,21 @@ class AristonSensor(Entity):
     @property
     def unit_of_measurement(self):
         """Return the units of measurement."""
-        return self._unit_of_measurement
+        if isinstance(self._unit_of_measurement, dict):
+            try:
+                if self._api._ariston_units != {}:
+                    if self._api._ariston_units["measurementSystem"] in self._unit_of_measurement:
+                        return self._unit_of_measurement[self._api._ariston_units["measurementSystem"]]
+                    else:
+                        return self._unit_of_measurement[DEFAULT_UNIT]
+                else:
+                    return self._unit_of_measurement[DEFAULT_UNIT]
+            except:
+                if DEFAULT_UNIT in self._unit_of_measurement:
+                    return self._unit_of_measurement[DEFAULT_UNIT]
+                return None
+        else:
+            return self._unit_of_measurement
 
     @property
     def available(self):
@@ -262,6 +296,8 @@ class AristonSensor(Entity):
         elif self._sensor_type in [PARAM_DHW_COMFORT_FUNCTION,
                                    PARAM_SIGNAL_STRENGTH]:
             return self._api.available and self._api._ariston_other_data != {}
+        elif self._sensor_type in [PARAM_UNITS]:
+            return self._api.available and self._api._ariston_units != {}
         else:
             return self._api.available
 
@@ -540,6 +576,13 @@ class AristonSensor(Entity):
                             self._state = param_item["value"]
                             break
                 except:
+                    pass
+
+            elif self._sensor_type == PARAM_UNITS:
+                try:
+                    self._state = VALUE_TO_UNIT[self._api._ariston_units["measurementSystem"]]
+                except:
+                    self._state = VAL_UNKNOWN
                     pass
 
         except AristonError as error:

@@ -30,6 +30,7 @@ SENSOR_WATER_LAST_24H = "Energy use for Water in last 24 hours"
 SENSOR_WATER_LAST_7D = "Energy use for Water in last 7 days"
 SENSOR_WATER_LAST_30D = "Energy use for Water in last 30 days"
 SENSOR_WATER_LAST_365D = "Energy use for Water in last 365 days"
+SENSOR_UNITS = "Units of Measurement"
 
 BINARY_SENSOR_CH_FLAME = "CH Flame"
 BINARY_SENSOR_CH_AUTO_FUNCTION = "CH Auto Function"
@@ -62,6 +63,8 @@ VAL_AVAILABLE = "available"
 VAL_DISABLED = "disabled"
 VAL_TIME_BASED = "time_based"
 VAL_ALWAYS_ACTIVE = "always_active"
+VAL_METRIC = "metric"
+VAL_IMPERIAL = "imperial"
 
 LANG_UK = "uk"
 LANG_EN = "en"
@@ -107,6 +110,7 @@ PARAM_WATER_LAST_24H = "water_last_24h"
 PARAM_WATER_LAST_7D = "water_last_7d"
 PARAM_WATER_LAST_30D = "water_last_30d"
 PARAM_WATER_LAST_365D = "water_last_365d"
+PARAM_UNITS = "units"
 
 # binary sensors
 PARAM_CH_AUTO_FUNCTION = "ch_auto_function"
@@ -169,4 +173,6 @@ DHW_MODE_TO_VALUE = {VAL_MANUAL: 2, VAL_PROGRAM: 1}
 VALUE_TO_DHW_MODE = {2: VAL_MANUAL, 1: VAL_PROGRAM, 0: VAL_UNSUPPORTED}
 DHW_COMFORT_FUNCT_TO_VALUE = {VAL_DISABLED: 0, VAL_TIME_BASED: 1, VAL_ALWAYS_ACTIVE: 2}
 DHW_COMFORT_VALUE_TO_FUNCT = {0: VAL_DISABLED, 1: VAL_TIME_BASED, 2: VAL_ALWAYS_ACTIVE}
+UNIT_TO_VALUE = {VAL_METRIC: 0, VAL_IMPERIAL: 1}
+VALUE_TO_UNIT = {0: VAL_METRIC, 1: VAL_IMPERIAL}
 PARAM_STRING_TO_VALUE = {"true": 1, "false": 0}

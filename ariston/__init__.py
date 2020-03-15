@@ -55,6 +55,7 @@ from .const import (
     DOMAIN,
     MODE_TO_VALUE,
     DHW_COMFORT_FUNCT_TO_VALUE,
+    UNIT_TO_VALUE,
     SERVICE_SET_DATA,
     SERVICE_UPDATE,
     PARAM_MODE,
@@ -73,6 +74,7 @@ from .const import (
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
     PARAM_STRING_TO_VALUE,
+    PARAM_UNITS,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_HEATING_ONLY,
@@ -111,20 +113,25 @@ HTTP_MULTIPLY = 2
 HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMEOUT_LOGIN = 3
 HTTP_TIMEOUT_GET = 15
-HTTP_TIMEOUT_GET_OTHERS = 10
+HTTP_TIMEOUT_GET_MEDIUM = 8
+HTTP_TIMEOUT_GET_SMALL = 5
 HTTP_TIMEOUT_SET = 15
 HTTP_TIMEOUT_SET_PARAM = 10
+HTTP_TIMEOUT_SET_UNITS = 5
 HTTP_SET_INTERVAL = HTTP_RETRY_INTERVAL_DOWN + HTTP_TIMER_SET_LOCK + 5
-HTTP_SET_INTERVAL_PARAM = HTTP_RETRY_INTERVAL_DOWN * HTTP_MULTIPLY + HTTP_TIMER_SET_LOCK + 5
 
 UNKNOWN_TEMP = 0.0
+UNKNOWN_UNITS = 3276
 REQUEST_GET_MAIN = "_get_main"
 REQUEST_GET_CH = "_get_ch"
 REQUEST_GET_ERROR = "_get_error"
 REQUEST_GET_GAS = "_get_gas"
 REQUEST_GET_OTHER = "_get_param"
+REQUEST_GET_UNITS = "_get_units"
+
 REQUEST_SET_MAIN = "_set_main"
 REQUEST_SET_OTHER = "_set_param"
+REQUEST_SET_UNITS = "_set_units"
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -218,6 +225,7 @@ class AristonChecker():
         self._ariston_error_data = {}
         self._ariston_ch_data = {}
         self._ariston_other_data = {}
+        self._ariston_units = {}
         self._data_lock = threading.Lock()
         self._device = device
         self._errors = 0
@@ -227,14 +235,16 @@ class AristonChecker():
             REQUEST_GET_CH: 0,
             REQUEST_GET_ERROR: 0,
             REQUEST_GET_GAS: 0,
-            REQUEST_GET_OTHER: 0
+            REQUEST_GET_OTHER: 0,
+            REQUEST_GET_UNITS: 0
         }
         self._get_time_end = {
             REQUEST_GET_MAIN: 0,
             REQUEST_GET_CH: 0,
             REQUEST_GET_ERROR: 0,
             REQUEST_GET_GAS: 0,
-            REQUEST_GET_OTHER: 0
+            REQUEST_GET_OTHER: 0,
+            REQUEST_GET_UNITS: 0
         }
         self._get_zero_temperature = {
             PARAM_CH_SET_TEMPERATURE: UNKNOWN_TEMP,
@@ -256,9 +266,14 @@ class AristonChecker():
         self._plant_id_lock = threading.Lock()
         self._session = requests.Session()
         self._set_param = {}
+        self._set_param_goup = {
+            REQUEST_SET_MAIN: False,
+            REQUEST_SET_OTHER: False,
+            REQUEST_SET_UNITS: False
+        }
         self._set_main_retry = 0
-        self._set_ch_retry = 0
         self._set_param_retry = 0
+        self._set_units_retry = 0
         self._set_max_retries = retries
         self._set_new_data_pending = False
         self._set_scheduled = False
@@ -512,7 +527,7 @@ class AristonChecker():
                 self._ariston_gas_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_gas_data = {}
-                _LOGGER.warning("%s Invalid data received for error, not JSON", self)
+                _LOGGER.warning("%s Invalid data received for energy use, not JSON", self)
                 raise CommError
 
         elif request_type == REQUEST_GET_OTHER:
@@ -545,7 +560,7 @@ class AristonChecker():
                 self._ariston_other_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_other_data = {}
-                _LOGGER.warning("%s Invalid data received for error, not JSON", self)
+                _LOGGER.warning("%s Invalid data received for parameters, not JSON", self)
                 raise CommError
 
             for item, param_item in enumerate(self._ariston_other_data):
@@ -584,6 +599,14 @@ class AristonChecker():
                 except:
                     continue
 
+        elif request_type == REQUEST_GET_UNITS:
+            try:
+                self._ariston_units = copy.deepcopy(resp.json())
+            except:
+                self._ariston_units = {}
+                _LOGGER.warning("%s Invalid data received for units, not JSON", self)
+                raise CommError
+
         self._get_time_end[request_type] = time.time()
 
         if self._store_file:
@@ -598,9 +621,11 @@ class AristonChecker():
                     json.dump(self._ariston_gas_data, ariston_fetched)
                 elif request_type == REQUEST_GET_OTHER:
                     json.dump(self._ariston_other_data, ariston_fetched)
+                elif request_type == REQUEST_GET_UNITS:
+                    json.dump(self._ariston_units, ariston_fetched)
             with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
                 json.dump(self._get_zero_temperature, ariston_fetched)
-            with open('/config/data_' + self._name + request_type + '_timers.json', 'w') as ariston_fetched:
+            with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:
                 json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
                           ariston_fetched)
             if store_none_zero:
@@ -620,19 +645,22 @@ class AristonChecker():
                 # do not read immediately during set attempt
                 if request_type == REQUEST_GET_CH:
                     url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
                 elif request_type == REQUEST_GET_ERROR:
                     url_get = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
                               '?$inlinecount=allpages&$skip=0&$top=100'
-                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
                 elif request_type == REQUEST_GET_GAS:
                     url_get = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
                 elif request_type == REQUEST_GET_OTHER:
                     ids_to_fetch = ",".join(map(str, ARISTON_PARAM_LIST))
                     url_get = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
                               '&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_OTHERS
+                    http_timeout = HTTP_TIMEOUT_GET_SMALL
+                elif request_type == REQUEST_GET_UNITS:
+                    url_get = self._url + '/PlantPreference/GetData/' + self._plant_id
+                    http_timeout = HTTP_TIMEOUT_GET_SMALL
                 else:
                     url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                     http_timeout = HTTP_TIMEOUT_GET
@@ -667,23 +695,34 @@ class AristonChecker():
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
             # schedule main read
             track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=retry_in))
-            # schedule other parameters read every second request
-            if self._get_request_number % 2 == 0:
+            # schedule all other requests
+            if self._set_param_goup[REQUEST_SET_OTHER] and not self._set_param_goup[REQUEST_SET_MAIN]:
+                # parameters being set, ask more frequently
                 track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
-            # schedule error read
-            elif self._get_request_number == 1:
-                track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=25))
-            # schedule ch weekly data read
-            elif self._get_request_number == 3:
-                track_point_in_time(self._hass, self._get_ch_data, dt_util.now() + timedelta(seconds=25))
-            # schedule gas use statistics read
-            elif self._get_request_number == 5:
-                track_point_in_time(self._hass, self._get_gas_water_data, dt_util.now() + timedelta(seconds=25))
-            # step request counter
-            if self._get_request_number < 5:
-                self._get_request_number += 1
+            elif self._set_param_goup[REQUEST_SET_UNITS] and not self._set_param_goup[REQUEST_SET_MAIN]:
+                # parameters being set, ask more frequently
+                track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
             else:
-                self._get_request_number = 0
+                # schedule other parameters read every second request
+                if self._get_request_number % 2 == 0:
+                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
+                # schedule error read
+                elif self._get_request_number == 1:
+                    track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=25))
+                # schedule ch weekly data read
+                elif self._get_request_number == 3:
+                    track_point_in_time(self._hass, self._get_ch_data, dt_util.now() + timedelta(seconds=25))
+                # schedule gas use statistics read
+                elif self._get_request_number == 5:
+                    track_point_in_time(self._hass, self._get_gas_water_data, dt_util.now() + timedelta(seconds=25))
+                # schedule unit data every first request loop
+                if self._get_request_number == 0:
+                    track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=35))
+                # step request counter
+                if self._get_request_number < 5:
+                    self._get_request_number += 1
+                else:
+                    self._get_request_number = 0
         try:
             self._get_http_data(REQUEST_GET_MAIN)
         except AristonError:
@@ -722,15 +761,19 @@ class AristonChecker():
         """Get Ariston other data from http"""
         self._get_http_data(REQUEST_GET_OTHER)
 
+    def _get_unit_data(self, dummy=None):
+        """Get Ariston unit data from http"""
+        self._get_http_data(REQUEST_GET_UNITS)
+
     def _setting_http_data(self, set_data, request_type=""):
         """setting of data"""
         try:
             if self._store_file:
                 with open('/config/data_' + self._name + request_type + '.json', 'w') as ariston_fetched:
                     json.dump(set_data, ariston_fetched)
-                with open('/config/data_' + self._name + request_type + '_all_params.json', 'w') as ariston_fetched:
+                with open('/config/data_' + self._name + '_all_set.json', 'w') as ariston_fetched:
                     json.dump(self._set_param, ariston_fetched)
-                with open('/config/data_' + self._name + request_type + '_timers.json', 'w') as ariston_fetched:
+                with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:
                     json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
                               ariston_fetched)
         except:
@@ -738,6 +781,9 @@ class AristonChecker():
         if request_type == REQUEST_SET_OTHER:
             url = self._url + '/Menu/User/Submit/' + self._plant_id + '?umsys=si'
             http_timeout = HTTP_TIMEOUT_SET_PARAM
+        elif request_type == REQUEST_SET_UNITS:
+            url = self._url + '/PlantPreference/SetData/' + self._plant_id
+            http_timeout = HTTP_TIMEOUT_SET_UNITS
         else:
             url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
             http_timeout = HTTP_TIMEOUT_SET
@@ -780,7 +826,8 @@ class AristonChecker():
                 # initiated from set_http_data, no longer pending
                 self._set_new_data_pending = False
                 self._set_main_retry = 0
-                self._set_ch_retry = 0
+                self._set_param_retry = 0
+                self._set_units_retry = 0
                 if self._set_scheduled:
                     # we wait for another attempt after timeout, data will be set then
                     return
@@ -788,6 +835,7 @@ class AristonChecker():
             if self._login and self.available and self._plant_id != "":
                 main_data_changed = False
                 param_data_changed = False
+                units_data_changed = False
                 set_data = {}
                 # prepare setting of main data dictionary
                 set_data["NewValue"] = copy.deepcopy(self._ariston_data)
@@ -803,36 +851,11 @@ class AristonChecker():
                     set_data["OldValue"]["zone"]["derogaUntil"] = DEFAULT_TIME
                     pass
 
-                # prepare setting of CH data dictionary
+                set_units_data = {}
                 try:
-                    set_ch_data = copy.deepcopy(self._ariston_ch_data)
-                    set_ch_data["progId"] = "ChZn1"
-                    set_ch_data["comfortTemp"]["formattedValue"] = str(set_ch_data["comfortTemp"]["value"])
-                    set_ch_data["comfortTemp"]["upDownVisible"] = False
-                    set_ch_data["comfortTemp"]["readOnly"] = True
-                    set_ch_data["economyTemp"]["formattedValue"] = str(set_ch_data["economyTemp"]["value"])
-                    set_ch_data["economyTemp"]["upDownVisible"] = False
-                    set_ch_data["economyTemp"]["readOnly"] = True
-                    for day_of_week in DAYS_OF_WEEK:
-                        if day_of_week in set_ch_data:
-                            set_ch_data[day_of_week]["dayName"] = day_of_week
-                            item = 0
-                            for day_slices in set_ch_data[day_of_week]["slices"]:
-                                set_ch_data[day_of_week]["slices"][item]["from"] = _change_to_24h_format(
-                                    day_slices["from"])
-                                set_ch_data[day_of_week]["slices"][item]["fromOri"] = _change_to_24h_format(
-                                    day_slices["from"])
-                                set_ch_data[day_of_week]["slices"][item]["to"] = _change_to_24h_format(
-                                    day_slices["to"])
-                                set_ch_data[day_of_week]["slices"][item]["toOri"] = _change_to_24h_format(
-                                    day_slices["to"])
-                                if day_slices["temperatureId"] == 1:
-                                    set_ch_data[day_of_week]["slices"][item]["temperature"] = "Comfort"
-                                else:
-                                    set_ch_data[day_of_week]["slices"][item]["temperature"] = "Economy"
-                                item = item + 1
+                    set_units_data["measurementSystem"] = self._ariston_units["measurementSystem"]
                 except:
-                    set_ch_data = {}
+                    set_units_data["measurementSystem"] = UNKNOWN_UNITS
                     pass
 
                 dhw_temp = {}
@@ -1158,7 +1181,23 @@ class AristonChecker():
                         set_data["NewValue"]["dhwMode"] = self._set_param[PARAM_DHW_MODE]
                         main_data_changed = True
 
-                if main_data_changed or param_data_changed:
+                if PARAM_UNITS in self._set_param:
+                    if set_units_data["measurementSystem"] == self._set_param[PARAM_UNITS]:
+                        if self._set_time_start[REQUEST_SET_UNITS] < self._get_time_end[REQUEST_GET_UNITS]:
+                            # value should be up to date and match to remove from setting
+                            del self._set_param[PARAM_UNITS]
+                        else:
+                            # assume data was not yet changed
+                            units_data_changed = True
+                    else:
+                        set_units_data["measurementSystem"] = self._set_param[PARAM_UNITS]
+                        units_data_changed = True
+
+                self._set_param_goup[REQUEST_SET_MAIN] = main_data_changed
+                self._set_param_goup[REQUEST_SET_OTHER] = param_data_changed
+                self._set_param_goup[REQUEST_SET_UNITS] = units_data_changed
+
+                if main_data_changed or param_data_changed or units_data_changed:
                     if main_data_changed and self._set_main_retry < self._set_max_retries:
 
                         # retry again after enough time
@@ -1167,13 +1206,20 @@ class AristonChecker():
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
 
-                    elif param_data_changed and ((self._set_param_retry == 0 and (
-                            main_data_changed)) or self._set_ch_retry < self._set_max_retries):
+                    elif param_data_changed and self._set_param_retry < self._set_max_retries:
 
                         # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL_PARAM)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_param_retry = self._set_param_retry + 1
+                        self._set_scheduled = True
+
+                    elif units_data_changed and self._set_units_retry < self._set_max_retries:
+
+                        # retry again after enough time
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
+                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
+                        self._set_units_retry = self._set_units_retry + 1
                         self._set_scheduled = True
 
                     else:
@@ -1198,6 +1244,13 @@ class AristonChecker():
                             raise CommError(error)
                     except:
                         pass
+
+                elif units_data_changed:
+                    try:
+                        self._setting_http_data(set_units_data, REQUEST_SET_UNITS)
+                    except:
+                        pass
+
                 else:
                     _LOGGER.debug('%s Same data was used', self)
             else:
@@ -1426,6 +1479,20 @@ class AristonChecker():
                                         wanted_ch_auto)
                         pass
 
+                # check units of measurement
+                if PARAM_UNITS in parameter_list:
+                    wanted_units = str(parameter_list[PARAM_UNITS]).lower()
+                    try:
+                        if wanted_units in UNIT_TO_VALUE:
+                            self._set_param[PARAM_UNITS] = UNIT_TO_VALUE[wanted_units]
+                            _LOGGER.info('%s New units of measurement is %s', self, wanted_units)
+                        else:
+                            _LOGGER.warning('%s Unknown or unsupported units of measurement: %s', self, wanted_units)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported units of measurement or key error: %s', self,
+                                        wanted_units)
+                        pass
+
                 self._set_new_data_pending = True
                 # set after short delay to not affect switch or climate or water_heater
                 retry_time = dt_util.now() + timedelta(seconds=1)
@@ -1572,6 +1639,10 @@ def setup(hass, config):
                         data = call.data.get(PARAM_CH_AUTO_FUNCTION, "")
                         if data != "":
                             parameter_list[PARAM_CH_AUTO_FUNCTION] = data
+
+                        data = call.data.get(PARAM_UNITS, "")
+                        if data != "":
+                            parameter_list[PARAM_UNITS] = data
 
                     _LOGGER.debug("device found, data to check and send")
 

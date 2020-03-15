@@ -6,7 +6,7 @@ Cimate and Water Heater components have presets to switch between `off`, `summer
 
 ## Integration slow nature
 In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 6 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
-Setting of data is perfomed immediately on request with attempts scheduled to every 2 upto 3.5 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
 Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
@@ -85,6 +85,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `mode` - mode of boiler (`off` or `summer` or `winter` and others).
   - `outside_temperature` - outside temperature. Not supported on all models.
   - `signal_strength` - Wifi signal strength.
+  - `units` - Units of measurement
   - `water_last_24h` - energy use for water in last 24 hours. Not supported on all models.
   - `water_last_30d` - energy use for water in last 7 days. Not supported on all models.
   - `water_last_365d` - energy use for water in last 30 days. Not supported on all models.
@@ -140,6 +141,7 @@ ariston:
     - mode
     - outside_temperature
     - signal_strength
+    - units
     - water_last_24h
     - water_last_30d
     - water_last_365d

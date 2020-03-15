@@ -14,10 +14,10 @@ set_data:
       description: "(Optional) CH mode: 'manual' or 'program'."
       example: manual
     ch_comfort_temperature:
-      description: "(Optional) Set CH Comfort temperature in C in steps of '0.5'. Value range depends on model."
+      description: "(Optional) Set CH Comfort temperature in steps of '0.5'. Value range depends on model."
       example: 23
     ch_economy_temperature:
-      description: "(Optional) Set CH Economy temperature in C in steps of '0.5'. Value range depends on model."
+      description: "(Optional) Set CH Economy temperature in steps of '0.5'. Value range depends on model."
       example: 23.5
     dhw_mode:
       description: "(Optional) DHW mode: 'manual' or 'program'. Support depends on model."
@@ -26,10 +26,10 @@ set_data:
       description: "(Optional) DHW Comfort Function: 'disabled' or 'time_based' or 'always_active'"
       example: 'disabled'
     dhw_comfort_temperature:
-      description: "(Optional) Set DHW Comfort temperature in C in steps of '1.0'. Value range depends on model."
+      description: "(Optional) Set DHW Comfort temperature in steps of '1.0'. Value range depends on model."
       example: 46
     dhw_economy_temperature:
-      description: "(Optional) Set DHW Economy temperature in C in steps of '1.0'. Value range depends on model."
+      description: "(Optional) Set DHW Economy temperature in steps of '1.0'. Value range depends on model."
       example: 46
     internet_time:
       description: "(Optional) enable or disable time from internet (boolean)."
@@ -37,3 +37,6 @@ set_data:
     internet_weather:
       description: "(Optional) enable or disable weather from internet (boolean)."
       example: true
+    units:
+      description: "(Optional) Units of measurement: 'metric' or 'imperial'."
+      example: 'metric'

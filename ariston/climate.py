@@ -21,6 +21,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     CONF_NAME,
     TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
 )
 
 from .const import (
@@ -152,6 +153,9 @@ class AristonThermostat(ClimateDevice):
     @property
     def temperature_unit(self):
         """Return the unit of measurement."""
+        if "measurementSystem" in self._api._ariston_units:
+            if self._api._ariston_units["measurementSystem"] == 1:
+                return TEMP_FAHRENHEIT
         return TEMP_CELSIUS
 
     @property
