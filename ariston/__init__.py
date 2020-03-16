@@ -266,7 +266,7 @@ class AristonChecker():
         self._plant_id_lock = threading.Lock()
         self._session = requests.Session()
         self._set_param = {}
-        self._set_param_goup = {
+        self._set_param_group = {
             REQUEST_SET_MAIN: False,
             REQUEST_SET_OTHER: False,
             REQUEST_SET_UNITS: False
@@ -696,10 +696,10 @@ class AristonChecker():
             # schedule main read
             track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=retry_in))
             # schedule all other requests
-            if self._set_param_goup[REQUEST_SET_OTHER] and not self._set_param_goup[REQUEST_SET_MAIN]:
+            if self._set_param_group[REQUEST_SET_OTHER] and not self._set_param_group[REQUEST_SET_MAIN]:
                 # parameters being set, ask more frequently
                 track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
-            elif self._set_param_goup[REQUEST_SET_UNITS] and not self._set_param_goup[REQUEST_SET_MAIN]:
+            elif self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN]:
                 # parameters being set, ask more frequently
                 track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
             else:
@@ -1195,9 +1195,9 @@ class AristonChecker():
                         set_units_data["measurementSystem"] = self._set_param[PARAM_UNITS]
                         units_data_changed = True
 
-                self._set_param_goup[REQUEST_SET_MAIN] = main_data_changed
-                self._set_param_goup[REQUEST_SET_OTHER] = param_data_changed
-                self._set_param_goup[REQUEST_SET_UNITS] = units_data_changed
+                self._set_param_group[REQUEST_SET_MAIN] = main_data_changed
+                self._set_param_group[REQUEST_SET_OTHER] = param_data_changed
+                self._set_param_group[REQUEST_SET_UNITS] = units_data_changed
 
                 if main_data_changed or param_data_changed or units_data_changed:
                     if main_data_changed and self._set_main_retry < self._set_max_retries:
@@ -1227,13 +1227,13 @@ class AristonChecker():
                     else:
                         # no more retries, no need to keep changed data
                         self._set_param = {}
-                        for request_item in self._set_param_goup:
-                            self._set_param_goup[request_item] = False
+                        for request_item in self._set_param_group:
+                            self._set_param_group[request_item] = False
 
                 else:
                     self._set_param = {}
-                    for request_item in self._set_param_goup:
-                        self._set_param_goup[request_item] = False
+                    for request_item in self._set_param_group:
+                        self._set_param_group[request_item] = False
 
                 if main_data_changed:
                     try:
@@ -1272,8 +1272,8 @@ class AristonChecker():
                 else:
                     # no more retries, no need to keep changed data
                     self._set_param = {}
-                    for request_item in self._set_param_goup:
-                        self._set_param_goup[request_item] = False
+                    for request_item in self._set_param_group:
+                        self._set_param_group[request_item] = False
                     _LOGGER.warning("%s No stable connection to set the data", self)
                     raise CommError
 
