@@ -1227,8 +1227,13 @@ class AristonChecker():
                     else:
                         # no more retries, no need to keep changed data
                         self._set_param = {}
+                        for request_item in self._set_param_goup:
+                            self._set_param_goup[request_item] = False
+
                 else:
                     self._set_param = {}
+                    for request_item in self._set_param_goup:
+                        self._set_param_goup[request_item] = False
 
                 if main_data_changed:
                     try:
@@ -1267,6 +1272,8 @@ class AristonChecker():
                 else:
                     # no more retries, no need to keep changed data
                     self._set_param = {}
+                    for request_item in self._set_param_goup:
+                        self._set_param_goup[request_item] = False
                     _LOGGER.warning("%s No stable connection to set the data", self)
                     raise CommError
 
