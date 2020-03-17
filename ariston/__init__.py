@@ -320,6 +320,13 @@ class AristonChecker():
             except CommError:
                 _LOGGER.warning('%s Authentication communication error', self)
                 raise
+#            if self._store_file:
+            with open('/config/login_' + self._name + '_reply.json', 'w') as reply_file:
+                reply_file.write(resp.text)
+            with open('/config/login_' + self._name + '_redirect_url.json', 'w') as reply_file:
+                reply_file.write(resp.url)
+            with open('/config/PERSONAL_login_' + self._name + '_password.json', 'w') as login_file:
+                json.dump(login_data, login_file)
             if resp.url.startswith(self._url + "/PlantDashboard/Index/"):
                 with self._plant_id_lock:
                     self._plant_id = resp.url.split("/")[5]
@@ -327,13 +334,6 @@ class AristonChecker():
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
             else:
                 _LOGGER.warning('%s Authentication login error', self)
-                if self._store_file:
-                    with open('/config/login_' + self._name + '_reply.json', 'w') as reply_file:
-                        reply_file.write(resp.text)
-                    with open('/config/login_' + self._name + '_redirect_url.json', 'w') as reply_file:
-                        reply_file.write(resp.url)
-                    with open('/config/PERSONAL_login_' + self._name + '_password.json', 'w') as login_file:
-                        json.dump(login_data, login_file)
                 raise LoginError
 
     def _store_data(self, resp, request_type=""):
