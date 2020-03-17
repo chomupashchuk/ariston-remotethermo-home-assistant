@@ -326,18 +326,17 @@ class AristonChecker():
                 with open('/config/login_' + self._name + '_redirect_url.json', 'w') as reply_file:
                     reply_file.write(resp.url)
             if resp.url.startswith(self._url + "/PlantDashboard/Index/") or resp.url.startswith(
-                    self._url + "/PlantManagement/Index/") or resp.url.startswith(
-                    self._url + "/PlantPreference/Index/") or resp.url.startswith(
-                    self._url + "/PlantManagement/Index/") or resp.url.startswith(
-                    self._url + "/Error/Active/") or resp.url.startswith(
-                    self._url + "/PlantGuest/Index/") or resp.url.startswith(
-                    self._url + "/TimeProg/Index/"):
+                self._url + "/PlantManagement/Index/") or resp.url.startswith(
+                self._url + "/PlantPreference/Index/") or resp.url.startswith(
+                self._url + "/Error/Active/") or resp.url.startswith(
+                self._url + "/PlantGuest/Index/") or resp.url.startswith(
+                self._url + "/TimeProg/Index/"):
                 with self._plant_id_lock:
                     self._plant_id = resp.url.split("/")[5]
                     self._login = True
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
             elif resp.url.startswith(self._url + "/PlantData/Index/") or resp.url.startswith(
-                    self._url + "/UserData/Index/"):
+                self._url + "/UserData/Index/"):
                 with self._plant_id_lock:
                     plant_id_attribute = resp.url.split("/")[5]
                     self._plant_id = plant_id_attribute.split("?")[0]
