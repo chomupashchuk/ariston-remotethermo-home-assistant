@@ -66,6 +66,7 @@ from .const import (
     VALUE_TO_UNIT,
     VAL_METRIC,
     VAL_IMPERIAL,
+    VAL_AUTO,
     SENSOR_ACCOUNT_CH_GAS,
     SENSOR_ACCOUNT_CH_ELECTRICITY,
     SENSOR_ACCOUNT_DHW_GAS,
@@ -258,11 +259,14 @@ class AristonSensor(Entity):
         """Return the units of measurement."""
         if isinstance(self._unit_of_measurement, dict):
             try:
-                if self._api._ariston_units != {}:
-                    if self._api._ariston_units["measurementSystem"] in self._unit_of_measurement:
-                        return self._unit_of_measurement[self._api._ariston_units["measurementSystem"]]
-                    else:
-                        return self._unit_of_measurement[DEFAULT_UNIT]
+                measurement = DEFAULT_UNIT
+                if self._api._units == VAL_AUTO:
+                    if self._api._ariston_units != {}:
+                        measurement = self._api._ariston_units["measurementSystem"]
+                elif self._api._units == VAL_IMPERIAL:
+                    measurement = 1
+                if measurement in self._unit_of_measurement:
+                    return self._unit_of_measurement[measurement]
                 else:
                     return self._unit_of_measurement[DEFAULT_UNIT]
             except:

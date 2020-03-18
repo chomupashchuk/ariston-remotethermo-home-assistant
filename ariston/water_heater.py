@@ -37,6 +37,9 @@ from .const import (
     VAL_OFFLINE,
     VAL_MANUAL,
     VAL_PROGRAM,
+    VAL_AUTO,
+    VAL_METRIC,
+    VAL_IMPERIAL,
     VALUE_TO_MODE,
     VALUE_TO_DHW_MODE,
     UNKNOWN_TEMP,
@@ -179,10 +182,15 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def temperature_unit(self):
         """Return the unit of measurement."""
-        if "measurementSystem" in self._api._ariston_units:
-            if self._api._ariston_units["measurementSystem"] == 1:
-                return TEMP_FAHRENHEIT
-        return TEMP_CELSIUS
+        if self._api._units == VAL_AUTO:
+            if "measurementSystem" in self._api._ariston_units:
+                if self._api._ariston_units["measurementSystem"] == 1:
+                    return TEMP_FAHRENHEIT
+            return TEMP_CELSIUS
+        elif self._api._units == VAL_IMPERIAL:
+            return TEMP_FAHRENHEIT
+        else:
+            return TEMP_CELSIUS
 
     @property
     def min_temp(self):

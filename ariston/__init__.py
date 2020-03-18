@@ -775,9 +775,9 @@ class AristonChecker():
                                         dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # step request counter
                 if self._units == VAL_AUTO:
-                    request_loop = 5
-                else:
                     request_loop = 7
+                else:
+                    request_loop = 5
                 if self._get_request_number < request_loop:
                     self._get_request_number += 1
                 else:
