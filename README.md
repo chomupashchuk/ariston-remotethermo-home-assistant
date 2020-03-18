@@ -52,6 +52,8 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `max_retries` - number of retries to set the data in boiler. Retries are made in case of communication issues for example, which take place occasionally. By default the value is '1'.
   - `store_config_files` - `true` or `false` indicating if configuration `json` files to be stored in `/config` folder. Can be used for troubleshooting purposes for example. Default value is `false`.
   - `control_from_water_heater` - if `water_heater` entity will have controling parameters like `summer` or `winter` or `off` as part of operations. Default value is `false`.
+  - `units` - which uniots to be used. Values are: `metric` (°C-bar-kW...), `imperial` (°F-psi-kBtu/h...), `auto` (detect automatically, which takes additional time). Default is `metric`.
+  - `polling_rate` - indicates times it takes to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies, which might be beneficial in case of slow Ariston responces, but can affect other http requests in Home Assistant. Default is `normal`.
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).

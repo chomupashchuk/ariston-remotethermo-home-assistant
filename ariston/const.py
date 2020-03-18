@@ -65,6 +65,9 @@ VAL_TIME_BASED = "time_based"
 VAL_ALWAYS_ACTIVE = "always_active"
 VAL_METRIC = "metric"
 VAL_IMPERIAL = "imperial"
+VAL_AUTO = "auto"
+VAL_NORMAL = "normal"
+VAL_LONG = "long"
 
 LANG_UK = "uk"
 LANG_EN = "en"
@@ -164,6 +167,8 @@ CONF_STORE_CONFIG_FILES = "store_config_files"
 CONF_CONTROL_FROM_WATER_HEATER = "control_from_water_heater"
 CONF_HVAC_OFF_PRESENT = "hvac_off_present"
 CONF_LOCALIZATION = "localization"
+CONF_UNITS = "units"
+CONF_POLLING_RATE = "polling_rate"
 
 MODE_TO_VALUE = {VAL_WINTER: 1, VAL_SUMMER: 0, VAL_OFF: 5, VAL_HEATING_ONLY: 2}
 VALUE_TO_MODE = {1: VAL_WINTER, 0: VAL_SUMMER, 5: VAL_OFF, 2: VAL_HEATING_ONLY}

@@ -48,6 +48,8 @@ from .const import (
     CONF_STORE_CONFIG_FILES,
     CONF_CONTROL_FROM_WATER_HEATER,
     CONF_LOCALIZATION,
+    CONF_UNITS,
+    CONF_POLLING_RATE,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -81,6 +83,11 @@ from .const import (
     VAL_OFF,
     VAL_MANUAL,
     VAL_PROGRAM,
+    VAL_METRIC,
+    VAL_IMPERIAL,
+    VAL_AUTO,
+    VAL_NORMAL,
+    VAL_LONG,
     WATER_HEATERS,
     LANG_EN,
     LANG_LIST,
@@ -115,6 +122,7 @@ HTTP_TIMEOUT_LOGIN = 5
 HTTP_TIMEOUT_GET = 15
 HTTP_TIMEOUT_GET_MEDIUM = 8
 HTTP_TIMEOUT_GET_SMALL = 6
+HTTP_PARAM_DELAY = 25
 HTTP_TIMEOUT_SET = 15
 HTTP_TIMEOUT_SET_PARAM = 10
 HTTP_TIMEOUT_SET_UNITS = 5
@@ -133,6 +141,8 @@ REQUEST_SET_MAIN = "_set_main"
 REQUEST_SET_OTHER = "_set_param"
 REQUEST_SET_UNITS = "_set_units"
 
+POLLING_RATE_TO_VALUE = {VAL_NORMAL: 1, VAL_LONG: 1.5}
+
 _LOGGER = logging.getLogger(__name__)
 
 ARISTON_SCHEMA = vol.Schema(
@@ -150,6 +160,8 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_CONTROL_FROM_WATER_HEATER, default=False): cv.boolean,
         vol.Optional(CONF_HVAC_OFF_PRESENT, default=False): cv.boolean,
         vol.Optional(CONF_LOCALIZATION, default=LANG_EN): vol.In(LANG_LIST),
+        vol.Optional(CONF_UNITS, default=VAL_METRIC): vol.In([VAL_METRIC, VAL_IMPERIAL, VAL_AUTO]),
+        vol.Optional(CONF_POLLING_RATE, default=VAL_NORMAL): vol.In([VAL_NORMAL, VAL_LONG]),
     }
 )
 
@@ -218,7 +230,7 @@ def _json_validator(data):
 class AristonChecker():
     """Ariston checker"""
 
-    def __init__(self, hass, device, name, username, password, retries, store_file):
+    def __init__(self, hass, device, name, username, password, retries, store_file, units, polling):
         """Initialize."""
         self._ariston_data = {}
         self._ariston_gas_data = {}
@@ -264,6 +276,7 @@ class AristonChecker():
         self._password = password
         self._plant_id = ""
         self._plant_id_lock = threading.Lock()
+        self._polling = POLLING_RATE_TO_VALUE[polling]
         self._session = requests.Session()
         self._set_param = {}
         self._set_param_group = {
@@ -288,6 +301,7 @@ class AristonChecker():
         self._store_file = store_file
         self._token_lock = threading.Lock()
         self._token = None
+        self._units = units
         self._url = ARISTON_URL
         self._user = username
         self._verify = True
@@ -326,7 +340,7 @@ class AristonChecker():
                 with open('/config/login_' + self._name + '_redirect_url.json', 'w') as reply_file:
                     reply_file.write(resp.url)
             if resp.url.startswith(self._url + "/PlantDashboard/Index/") or resp.url.startswith(
-                self._url + "/PlantManagement/Index/") or resp.url.startswith(
+                    self._url + "/PlantManagement/Index/") or resp.url.startswith(
                 self._url + "/PlantPreference/Index/") or resp.url.startswith(
                 self._url + "/Error/Active/") or resp.url.startswith(
                 self._url + "/PlantGuest/Index/") or resp.url.startswith(
@@ -336,7 +350,7 @@ class AristonChecker():
                     self._login = True
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
             elif resp.url.startswith(self._url + "/PlantData/Index/") or resp.url.startswith(
-                self._url + "/UserData/Index/"):
+                    self._url + "/UserData/Index/"):
                 with self._plant_id_lock:
                     plant_id_attribute = resp.url.split("/")[5]
                     self._plant_id = plant_id_attribute.split("?")[0]
@@ -667,14 +681,14 @@ class AristonChecker():
                 # do not read immediately during set attempt
                 if request_type == REQUEST_GET_CH:
                     url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 elif request_type == REQUEST_GET_ERROR:
                     url_get = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
                               '?$inlinecount=allpages&$skip=0&$top=100'
-                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 elif request_type == REQUEST_GET_GAS:
                     url_get = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 elif request_type == REQUEST_GET_OTHER:
                     ids_to_fetch = ",".join(map(str, ARISTON_PARAM_LIST))
                     url_get = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
@@ -682,10 +696,10 @@ class AristonChecker():
                     http_timeout = HTTP_TIMEOUT_GET_SMALL
                 elif request_type == REQUEST_GET_UNITS:
                     url_get = self._url + '/PlantPreference/GetData/' + self._plant_id
-                    http_timeout = HTTP_TIMEOUT_GET_SMALL
+                    http_timeout = HTTP_TIMEOUT_GET_SMALL * self._polling
                 else:
                     url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
-                    http_timeout = HTTP_TIMEOUT_GET
+                    http_timeout = HTTP_TIMEOUT_GET * self._polling
                 with self._data_lock:
                     try:
                         self._get_time_start[request_type] = time.time()
@@ -710,40 +724,61 @@ class AristonChecker():
         with self._data_lock:
             if self._errors >= MAX_ERRORS_TIMER_EXTEND:
                 # give a little rest to the system
-                retry_in = HTTP_RETRY_INTERVAL_DOWN
+                retry_in = HTTP_RETRY_INTERVAL_DOWN * self._polling
                 _LOGGER.warning('%s Retrying in %s seconds', self, retry_in)
             else:
-                retry_in = HTTP_RETRY_INTERVAL
+                retry_in = HTTP_RETRY_INTERVAL * self._polling
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
             # schedule main read
             track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=retry_in))
             # schedule all other requests
             if self._set_param_group[REQUEST_SET_OTHER] and not self._set_param_group[REQUEST_SET_MAIN]:
                 # parameters being set, ask more frequently
-                track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
+                track_point_in_time(self._hass, self._get_other_data,
+                                    dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
             elif self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN]:
                 # parameters being set, ask more frequently
-                track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
+                track_point_in_time(self._hass, self._get_unit_data,
+                                    dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
             else:
                 if self._get_request_number == 0:
-                    # schedule other parameters read
-                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=40))
-                    # schedule unit data read
-                    track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=25))
+                    if self._units == VAL_AUTO:
+                        # schedule other parameters read
+                        track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(
+                            seconds=HTTP_PARAM_DELAY * self._polling + HTTP_TIMEOUT_GET_SMALL * 2))
+                        # schedule unit data read
+                        track_point_in_time(self._hass, self._get_unit_data,
+                                            dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
+                    else:
+                        # schedule other parameters read
+                        track_point_in_time(self._hass, self._get_other_data,
+                                            dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # schedule other parameters read every second request
                 elif self._get_request_number % 2 == 0:
-                    track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=25))
+                    track_point_in_time(self._hass, self._get_other_data,
+                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # schedule error read
                 elif self._get_request_number == 1:
-                    track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=25))
+                    track_point_in_time(self._hass, self._get_error_data,
+                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # schedule ch weekly data read
                 elif self._get_request_number == 3:
-                    track_point_in_time(self._hass, self._get_ch_data, dt_util.now() + timedelta(seconds=25))
+                    track_point_in_time(self._hass, self._get_ch_data,
+                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # schedule gas use statistics read
                 elif self._get_request_number == 5:
-                    track_point_in_time(self._hass, self._get_gas_water_data, dt_util.now() + timedelta(seconds=25))
+                    track_point_in_time(self._hass, self._get_gas_water_data,
+                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
+                # schedule unit data read
+                elif self._get_request_number == 7:
+                    track_point_in_time(self._hass, self._get_unit_data,
+                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
                 # step request counter
-                if self._get_request_number < 5:
+                if self._units == VAL_AUTO:
+                    request_loop = 5
+                else:
+                    request_loop = 7
+                if self._get_request_number < request_loop:
                     self._get_request_number += 1
                 else:
                     self._get_request_number = 0
@@ -804,13 +839,13 @@ class AristonChecker():
             pass
         if request_type == REQUEST_SET_OTHER:
             url = self._url + '/Menu/User/Submit/' + self._plant_id + '?umsys=si'
-            http_timeout = HTTP_TIMEOUT_SET_PARAM
+            http_timeout = HTTP_TIMEOUT_SET_PARAM * self._polling
         elif request_type == REQUEST_SET_UNITS:
             url = self._url + '/PlantPreference/SetData/' + self._plant_id
-            http_timeout = HTTP_TIMEOUT_SET_UNITS
+            http_timeout = HTTP_TIMEOUT_SET_UNITS * self._polling
         else:
             url = self._url + '/PlantDashboard/SetPlantAndZoneData/' + self._plant_id + '?zoneNum=1&umsys=si'
-            http_timeout = HTTP_TIMEOUT_SET
+            http_timeout = HTTP_TIMEOUT_SET * self._polling
         try:
             self._set_time_start[request_type] = time.time()
             resp = self._session.post(
@@ -1225,7 +1260,7 @@ class AristonChecker():
                     if main_data_changed and self._set_main_retry < self._set_max_retries:
 
                         # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
@@ -1233,7 +1268,7 @@ class AristonChecker():
                     elif param_data_changed and self._set_param_retry < self._set_max_retries:
 
                         # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_param_retry = self._set_param_retry + 1
                         self._set_scheduled = True
@@ -1241,7 +1276,7 @@ class AristonChecker():
                     elif units_data_changed and self._set_units_retry < self._set_max_retries:
 
                         # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_units_retry = self._set_units_retry + 1
                         self._set_scheduled = True
@@ -1287,7 +1322,7 @@ class AristonChecker():
                 if not self._set_scheduled:
                     if self._set_main_retry < self._set_max_retries:
                         # retry again after enough time to fetch data twice
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL)
+                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
                         self._set_main_retry = self._set_main_retry + 1
                         self._set_scheduled = True
@@ -1544,9 +1579,11 @@ def setup(hass, config):
         password = device[CONF_PASSWORD]
         retries = device[CONF_MAX_RETRIES]
         store_file = device[CONF_STORE_CONFIG_FILES]
+        units = device[CONF_UNITS]
+        polling = device[CONF_POLLING_RATE]
         try:
             api = AristonChecker(hass, device=device, name=name, username=username, password=password, retries=retries,
-                                 store_file=store_file)
+                                 store_file=store_file, units=units, polling=polling)
             api_list.append(api)
 
             # start api execution
