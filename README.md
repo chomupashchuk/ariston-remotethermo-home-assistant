@@ -10,7 +10,7 @@ Setting of data is perfomed immediately on request with attempts scheduled to ev
 Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
-## Integration was tested on:
+## Integration was tested on and work with:
   - Ariston Clas Evo
   - Ariston Genus One with Ariston BCH cylinder
   - Ariston Nimbus Flex
