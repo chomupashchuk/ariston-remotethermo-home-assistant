@@ -15,6 +15,9 @@ Monitoring change of configuration can be viewed via binary sensor `changing_dat
   - Ariston Genus One with Ariston BCH cylinder
   - Ariston Nimbus Flex
 
+## Integration does not work with:
+  - Ariston Velis Wifi
+
 ## Integration installation
 In `/config` folder create `custom_components` folder and load source files folder `ariston` in it
 In `configuration.yaml` include:
