@@ -12,6 +12,7 @@ from .const import (
     ARISTON_SIGNAL_STRENGHT,
     ARISTON_CH_COMFORT_TEMP,
     ARISTON_CH_ECONOMY_TEMP,
+    ARISTON_THERMAL_CLEANSE_CYCLE,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -47,6 +48,11 @@ from .const import (
     PARAM_WATER_LAST_30D,
     PARAM_WATER_LAST_365D,
     PARAM_UNITS,
+    PARAM_THERMAL_CLEANSE_CYCLE,
+    PARAM_DHW_PROGRAM,
+    PARAM_GAS_TYPE,
+    PARAM_GAS_COST,
+    PARAM_ELECTRICITY_COST,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_OFF,
@@ -64,7 +70,6 @@ from .const import (
     VALUE_TO_DHW_MODE,
     VALUE_TO_MODE,
     VALUE_TO_UNIT,
-    VAL_METRIC,
     VAL_IMPERIAL,
     VAL_AUTO,
     SENSOR_ACCOUNT_CH_GAS,
@@ -97,6 +102,11 @@ from .const import (
     SENSOR_WATER_LAST_30D,
     SENSOR_WATER_LAST_365D,
     SENSOR_UNITS,
+    SENSOR_THERMAL_CLEANSE_CYCLE,
+    SENSOR_DHW_PROGRAM,
+    SENSOR_GAS_TYPE,
+    SENSOR_GAS_COST,
+    SENSOR_ELECTRICITY_COST,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -142,6 +152,7 @@ SENSORS = {
                                    {DEFAULT_ICON: "mdi:radiator"}],
     PARAM_CH_ECONOMY_TEMPERATURE: [SENSOR_CH_ECONOMY_TEMPERATURE, {DEFAULT_UNIT: '°C', 1: "°F"},
                                    {DEFAULT_ICON: "mdi:radiator"}],
+    PARAM_DHW_PROGRAM: [SENSOR_DHW_PROGRAM, None, {DEFAULT_ICON: "mdi:calendar-month"}],
     PARAM_DHW_COMFORT_FUNCTION: [SENSOR_DHW_COMFORT_FUNCTION, None, {
         DEFAULT_ICON: "mdi:water-pump-off",
         VAL_DISABLED: "mdi:water-pump-off",
@@ -186,6 +197,10 @@ SENSORS = {
     PARAM_WATER_LAST_30D: [SENSOR_WATER_LAST_30D, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
     PARAM_WATER_LAST_365D: [SENSOR_WATER_LAST_365D, {DEFAULT_UNIT: 'kWh', 1: "kBtuh"}, {DEFAULT_ICON: "mdi:cash"}],
     PARAM_UNITS: [SENSOR_UNITS, None, {DEFAULT_ICON: "mdi:scale-balance"}],
+    PARAM_THERMAL_CLEANSE_CYCLE: [SENSOR_THERMAL_CLEANSE_CYCLE, 'h', {DEFAULT_ICON: "mdi:update"}],
+    PARAM_GAS_TYPE: [SENSOR_GAS_TYPE, None, {DEFAULT_ICON: "mdi:gas-cylinder"}],
+    PARAM_GAS_COST: [SENSOR_GAS_COST, None, {DEFAULT_ICON: "mdi:cash"}],
+    PARAM_ELECTRICITY_COST: [SENSOR_ELECTRICITY_COST, None, {DEFAULT_ICON: "mdi:cash"}],
 }
 
 
@@ -279,9 +294,11 @@ class AristonSensor(Entity):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._sensor_type in [PARAM_ERRORS]:
+        if self._sensor_type in [
+            PARAM_ERRORS]:
             return self._api.available and self._api._ariston_error_data != {}
-        elif self._sensor_type in [PARAM_CH_PROGRAM]:
+        elif self._sensor_type in [
+            PARAM_CH_PROGRAM]:
             return self._api.available and self._api._ariston_ch_data != {}
         elif self._sensor_type in [
             PARAM_ACCOUNT_CH_GAS,
@@ -297,11 +314,22 @@ class AristonSensor(Entity):
             PARAM_WATER_LAST_30D,
             PARAM_WATER_LAST_365D]:
             return self._api.available and self._api._ariston_gas_data != {}
-        elif self._sensor_type in [PARAM_DHW_COMFORT_FUNCTION,
-                                   PARAM_SIGNAL_STRENGTH]:
+        elif self._sensor_type in [
+            PARAM_DHW_COMFORT_FUNCTION,
+            PARAM_SIGNAL_STRENGTH,
+            PARAM_THERMAL_CLEANSE_CYCLE]:
             return self._api.available and self._api._ariston_other_data != {}
-        elif self._sensor_type in [PARAM_UNITS]:
+        elif self._sensor_type in [
+            PARAM_UNITS]:
             return self._api.available and self._api._ariston_units != {}
+        elif self._sensor_type in [
+            PARAM_GAS_TYPE,
+            PARAM_GAS_COST,
+            PARAM_ELECTRICITY_COST]:
+            return self._api.available and self._api._ariston_currency != {}
+        elif self._sensor_type in [
+            PARAM_DHW_PROGRAM]:
+            return self._api.available and self._api._ariston_dhw_data != {}
         else:
             return self._api.available
 
@@ -562,6 +590,25 @@ class AristonSensor(Entity):
                     self._state = VAL_UNKNOWN
                     pass
 
+            elif self._sensor_type == PARAM_DHW_PROGRAM:
+                try:
+                    if self._api._ariston_dhw_data != {}:
+                        self._state = VAL_AVAILABLE
+                        for day_of_week in DAYS_OF_WEEK:
+                            if day_of_week in self._api._ariston_dhw_data:
+                                for day_slices in self._api._ariston_dhw_data[day_of_week]["slices"]:
+                                    attribute_name = day_of_week + '_' + day_slices["from"] + '_' + day_slices["to"]
+                                    if day_slices["temperatureId"] == 1:
+                                        attribute_value = "Comfort"
+                                    else:
+                                        attribute_value = "Economy"
+                                    self._attrs[attribute_name] = attribute_value
+                    else:
+                        self._state = VAL_UNKNOWN
+                except:
+                    self._state = VAL_UNKNOWN
+                    pass
+
             elif self._sensor_type == PARAM_DHW_COMFORT_FUNCTION:
                 self._state = VAL_UNKNOWN
                 try:
@@ -582,9 +629,57 @@ class AristonSensor(Entity):
                 except:
                     pass
 
+            elif self._sensor_type == PARAM_THERMAL_CLEANSE_CYCLE:
+                self._state = VAL_UNKNOWN
+                try:
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_THERMAL_CLEANSE_CYCLE:
+                            self._state = param_item["value"]
+                            break
+                except:
+                    pass
+
             elif self._sensor_type == PARAM_UNITS:
                 try:
                     self._state = VALUE_TO_UNIT[self._api._ariston_units["measurementSystem"]]
+                except:
+                    self._state = VAL_UNKNOWN
+                    pass
+
+            elif self._sensor_type == PARAM_GAS_TYPE:
+                try:
+                    self._state = self._api._ariston_currency["gasTypeOptions"][self._api._ariston_currency["gasType"]][
+                        "text"]
+                    self._unit_of_measurement = \
+                        self._api._ariston_currency["gasEnergyUnitOptions"][
+                            self._api._ariston_currency["gasEnergyUnit"]][
+                            "text"]
+                except:
+                    self._state = VAL_UNKNOWN
+                    pass
+
+            elif self._sensor_type == PARAM_GAS_COST:
+                try:
+                    self._state = self._api._ariston_currency["gasCost"]
+                    self._unit_of_measurement = \
+                        self._api._ariston_currency["currencySymbols"][self._api._ariston_currency["currency"] - 1][
+                            "Value"]
+                    self._attrs["Description"] = \
+                        self._api._ariston_currency["currencyOptions"][self._api._ariston_currency["currency"] - 1][
+                            "Value"]
+                except:
+                    self._state = VAL_UNKNOWN
+                    pass
+
+            elif self._sensor_type == PARAM_ELECTRICITY_COST:
+                try:
+                    self._state = self._api._ariston_currency["electricityCost"]
+                    self._unit_of_measurement = \
+                        self._api._ariston_currency["currencySymbols"][self._api._ariston_currency["currency"] - 1][
+                            "Value"]
+                    self._attrs["Description"] = \
+                        self._api._ariston_currency["currencyOptions"][self._api._ariston_currency["currency"] - 1][
+                            "Value"]
                 except:
                     self._state = VAL_UNKNOWN
                     pass

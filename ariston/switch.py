@@ -3,29 +3,29 @@ from datetime import timedelta
 
 from homeassistant.components.switch import SwitchDevice
 from homeassistant.const import CONF_SWITCHES, CONF_NAME
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
 
 from .const import (
     ARISTON_INTERNET_TIME,
     ARISTON_INTERNET_WEATHER,
     ARISTON_CH_AUTO_FUNCTION,
+    ARISTON_THERMAL_CLEANSE_FUNCTION,
     CONF_POWER_ON,
     DATA_ARISTON,
     DEVICES,
     PARAM_MODE,
-    SERVICE_UPDATE,
     VAL_OFF,
     VALUE_TO_MODE,
     PARAM_INTERNET_TIME,
     PARAM_INTERNET_WEATHER,
     PARAM_POWER,
     PARAM_CH_AUTO_FUNCTION,
+    PARAM_THERMAL_CLEANSE_FUNCTION,
     SWITCH_POWER,
     BINARY_SENSOR_INTERNET_TIME,
     BINARY_SENSOR_INTERNET_WEATHER,
     BINARY_SENSOR_CH_AUTO_FUNCTION,
+    BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION,
 )
-from .helpers import service_signal
 
 STATE_SCAN_INTERVAL_SECS = 3
 
@@ -36,6 +36,7 @@ SWITCHES = {
     PARAM_INTERNET_TIME: (BINARY_SENSOR_INTERNET_TIME, "mdi:update"),
     PARAM_INTERNET_WEATHER: (BINARY_SENSOR_INTERNET_WEATHER, "mdi:weather-partly-cloudy"),
     PARAM_CH_AUTO_FUNCTION: (BINARY_SENSOR_CH_AUTO_FUNCTION, "mdi:radiator"),
+    PARAM_THERMAL_CLEANSE_FUNCTION: (BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION, "mdi:allergy"),
 }
 
 
@@ -86,7 +87,14 @@ class AristonSwitch(SwitchDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        return self._api.available
+        if self._switch_type in [
+            PARAM_INTERNET_TIME,
+            PARAM_INTERNET_WEATHER,
+            PARAM_CH_AUTO_FUNCTION,
+            PARAM_THERMAL_CLEANSE_FUNCTION]:
+            return self._api.available and self._api._ariston_other_data != {}
+        else:
+            return self._api.available
 
     @property
     def is_on(self):
@@ -117,6 +125,12 @@ class AristonSwitch(SwitchDevice):
                         if param_item["value"] == 1:
                             status_on = True
                             break
+            elif self._switch_type == PARAM_THERMAL_CLEANSE_FUNCTION:
+                for param_item in self._api._ariston_other_data:
+                    if param_item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
+                        if param_item["value"] == 1:
+                            status_on = True
+                            break
         except:
             status_on = False
             pass
@@ -126,14 +140,22 @@ class AristonSwitch(SwitchDevice):
         """Turn the switch on."""
         if self._switch_type == PARAM_POWER:
             self._api.set_http_data({PARAM_MODE: self._api._device[CONF_POWER_ON]})
-        elif self._switch_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER, PARAM_CH_AUTO_FUNCTION]:
+        elif self._switch_type in [
+            PARAM_INTERNET_TIME,
+            PARAM_INTERNET_WEATHER,
+            PARAM_CH_AUTO_FUNCTION,
+            PARAM_THERMAL_CLEANSE_FUNCTION]:
             self._api.set_http_data({self._switch_type: "true"})
 
     def turn_off(self, **kwargs):
         """Turn the device off."""
         if self._switch_type == PARAM_POWER:
             self._api.set_http_data({PARAM_MODE: VAL_OFF})
-        elif self._switch_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER, PARAM_CH_AUTO_FUNCTION]:
+        elif self._switch_type in [
+            PARAM_INTERNET_TIME,
+            PARAM_INTERNET_WEATHER,
+            PARAM_CH_AUTO_FUNCTION,
+            PARAM_THERMAL_CLEANSE_FUNCTION]:
             self._api.set_http_data({self._switch_type: "false"})
 
     def update(self):

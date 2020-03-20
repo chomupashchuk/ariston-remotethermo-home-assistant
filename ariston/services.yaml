@@ -31,6 +31,12 @@ set_data:
     dhw_economy_temperature:
       description: "(Optional) Set DHW Economy temperature in steps of '1.0'. Value range depends on model."
       example: 46
+    dhw_thermal_cleanse_cycle:
+      description: "(Optional) Thermal Cleanse Cycle in hours."
+      example: 240
+    dhw_thermal_cleanse_function:
+      description: "(Optional) Thermal Cleanse Function (boolean)."
+      example: true
     internet_time:
       description: "(Optional) enable or disable time from internet (boolean)."
       example: true

@@ -5,8 +5,8 @@ You are free to modify and distribute it, but it is distributed 'as is' with no 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
 
 ## Integration slow nature
-In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 6 minutes with possible skip if some data was changed. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
-Setting of data is perfomed immediately on request with attempts scheduled to every 2 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 2 to 10 minutes with possible skip if some data was changed or communication error. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2.5 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
 Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
@@ -63,6 +63,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `internet_time` - turn off and on sync with internet time.
   - `internet_weather` - turn off and on fetching of weather from internet.
   - `ch_auto_function` - turn off and on Auto function.
+  - `dhw_thermal_cleanse_function` - DHW thermal cleanse function enabled.
 
 #### Sensors
   - `account_ch_gas` - gas use summary for CH. Not supported on all models.
@@ -76,13 +77,18 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `ch_economy_temperature` - CH economy temperature.
   - `ch_set_temperature` - set CH temperature.
   - `ch_program` - CH Time Program.
+  - `dhw_program` - DHW Time Program.
   - `dhw_comfort_function` - DHW comfort function.
   - `dhw_mode` - mode of DHW. Not supported on all models.
   - `dhw_comfort_temperature` - DHW storage comfort temperature. Not supported on all models.
   - `dhw_economy_temperature` - DHW storage economy temperature. Not supported on all models.
   - `dhw_set_temperature` - set DHW temperature.
   - `dhw_storage_temperature` - DHW storage temperature. Not supported on all models.
-  - `errors` - active errors (no errors to test on)
+  - `dhw_thermal_cleanse_cycle` - DHW thermal cleanse cycle.
+  - `electricity_cost` - Electricity cost.
+  - `errors` - active errors (no errors to test on).
+  - `gas_type` - Gas type.
+  - `gas_cost` - Gas cost.
   - `heating_last_24h` - energy use for heating in last 24 hours. Not supported on all models.
   - `heating_last_30d` - energy use for heating in last 7 days. Not supported on all models.
   - `heating_last_365d` - energy use for heating in last 30 days. Not supported on all models.
@@ -99,7 +105,9 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
 #### Binary sensors
   - `ch_auto_function` - if CH AUTO function is enabled.
   - `ch_flame` - if CH heating is ongoing.
+  - `ch_pilot` - CH Pilot mode.
   - `changing_data` - if change of data via Home Assistant is ongoing.
+  - `dhw_thermal_cleanse_function` - DHW thermal cleanse function enabled.
   - `flame` - if any type of heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
   - `holiday_mode` - if holiday mode switch on via application or site.
@@ -116,50 +124,20 @@ ariston:
   max_retries: 5
   localization: 'pl'
   switches:
-    - power
     - internet_time
     - internet_weather
-    - ch_auto_function
   sensors:
-    - account_ch_gas
-    - account_ch_electricity
-    - account_dhw_gas
-    - account_dhw_electricity
-    - ch_antifreeze_temperature
     - ch_detected_temperature
     - ch_mode
     - ch_comfort_temperature
     - ch_economy_temperature
     - ch_set_temperature
-    - ch_program
-    - dhw_comfort_function
-    - dhw_mode
-    - dhw_comfort_temperature
-    - dhw_economy_temperature
     - dhw_set_temperature
-    - dhw_storage_temperature
     - errors
-    - heating_last_24h
-    - heating_last_30d
-    - heating_last_365d
-    - heating_last_7d
     - mode
     - outside_temperature
-    - signal_strength
-    - units
-    - water_last_24h
-    - water_last_30d
-    - water_last_365d
-    - water_last_7d
   binary_sensors:
-    - ch_auto_function
-    - ch_flame
     - changing_data
-    - flame
-    - holiday_mode
-    - heat_pump
-    - internet_time
-    - internet_weather
     - online
 ```
 

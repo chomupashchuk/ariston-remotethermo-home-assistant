@@ -14,6 +14,7 @@ from .const import (
     ARISTON_INTERNET_TIME,
     ARISTON_INTERNET_WEATHER,
     ARISTON_CH_AUTO_FUNCTION,
+    ARISTON_THERMAL_CLEANSE_FUNCTION,
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
@@ -26,6 +27,8 @@ from .const import (
     PARAM_INTERNET_WEATHER,
     PARAM_CH_AUTO_FUNCTION,
     PARAM_CH_FLAME,
+    PARAM_THERMAL_CLEANSE_FUNCTION,
+    PARAM_CH_PILOT,
     BINARY_SENSOR_HOLIDAY_MODE,
     BINARY_SENSOR_ONLINE,
     BINARY_SENSOR_FLAME,
@@ -35,6 +38,8 @@ from .const import (
     BINARY_SENSOR_INTERNET_WEATHER,
     BINARY_SENSOR_CH_AUTO_FUNCTION,
     BINARY_SENSOR_CH_FLAME,
+    BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION,
+    BINARY_SENSOR_CH_PILOT,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -57,6 +62,8 @@ BINARY_SENSORS = {
     PARAM_CHANGING_DATA: (BINARY_SENSOR_CHANGING_DATA, None, "mdi:cogs"),
     PARAM_INTERNET_TIME: (BINARY_SENSOR_INTERNET_TIME, None, "mdi:update"),
     PARAM_INTERNET_WEATHER: (BINARY_SENSOR_INTERNET_WEATHER, None, "mdi:weather-partly-cloudy"),
+    PARAM_THERMAL_CLEANSE_FUNCTION: (BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION, None, "mdi:allergy"),
+    PARAM_CH_PILOT: (BINARY_SENSOR_CH_PILOT, None, "mdi:head-cog-outline"),
 }
 
 
@@ -119,7 +126,11 @@ class AristonBinarySensor(BinarySensorDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._sensor_type in [PARAM_INTERNET_TIME, PARAM_INTERNET_WEATHER]:
+        if self._sensor_type in [
+            PARAM_INTERNET_TIME,
+            PARAM_INTERNET_WEATHER,
+            PARAM_CH_AUTO_FUNCTION,
+            PARAM_THERMAL_CLEANSE_FUNCTION]:
             return self._api.available and self._api._ariston_other_data != {}
         else:
             return self._sensor_type == PARAM_ONLINE or self._api.available
@@ -165,6 +176,13 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = False
                     pass
 
+            elif self._sensor_type == PARAM_CH_PILOT:
+                try:
+                    self._state = self._api._ariston_data["zone"]["pilotOn"]
+                except:
+                    self._state = False
+                    pass
+
             elif self._sensor_type == PARAM_CHANGING_DATA:
                 if self._api._set_param == {}:
                     self._state = False
@@ -198,6 +216,17 @@ class AristonBinarySensor(BinarySensorDevice):
                 try:
                     for param_item in self._api._ariston_other_data:
                         if param_item["id"] == ARISTON_CH_AUTO_FUNCTION:
+                            if param_item["value"] == 1:
+                                self._state = True
+                                break
+                except:
+                    pass
+
+            elif self._sensor_type == PARAM_THERMAL_CLEANSE_FUNCTION:
+                self._state = False
+                try:
+                    for param_item in self._api._ariston_other_data:
+                        if param_item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
                             if param_item["value"] == 1:
                                 self._state = True
                                 break

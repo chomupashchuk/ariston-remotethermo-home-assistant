@@ -39,6 +39,8 @@ from .const import (
     ARISTON_CH_AUTO_FUNCTION,
     ARISTON_CH_COMFORT_TEMP,
     ARISTON_CH_ECONOMY_TEMP,
+    ARISTON_THERMAL_CLEANSE_FUNCTION,
+    ARISTON_THERMAL_CLEANSE_CYCLE,
     CH_MODE_TO_VALUE,
     CLIMATES,
     CONF_HVAC_OFF,
@@ -77,6 +79,8 @@ from .const import (
     PARAM_INTERNET_WEATHER,
     PARAM_STRING_TO_VALUE,
     PARAM_UNITS,
+    PARAM_THERMAL_CLEANSE_CYCLE,
+    PARAM_THERMAL_CLEANSE_FUNCTION,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_HEATING_ONLY,
@@ -114,15 +118,15 @@ DEFAULT_CH_MODES = [2, 3]
 MAX_ERRORS = 3
 MAX_ERRORS_TIMER_EXTEND = 2
 MAX_ZERO_TOLERANCE = 10
-HTTP_RETRY_INTERVAL = 60
-HTTP_RETRY_INTERVAL_DOWN = 90
+HTTP_RETRY_INTERVAL = 120
+HTTP_RETRY_INTERVAL_DOWN = 180
 HTTP_MULTIPLY = 2
 HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMEOUT_LOGIN = 5
-HTTP_TIMEOUT_GET = 15
-HTTP_TIMEOUT_GET_MEDIUM = 8
-HTTP_TIMEOUT_GET_SMALL = 6
-HTTP_PARAM_DELAY = 25
+HTTP_TIMEOUT_GET_LONG = 16
+HTTP_TIMEOUT_GET_MEDIUM = 10
+HTTP_TIMEOUT_GET_SHORT = 6
+HTTP_PARAM_DELAY = 30
 HTTP_TIMEOUT_SET = 15
 HTTP_TIMEOUT_SET_PARAM = 10
 HTTP_TIMEOUT_SET_UNITS = 5
@@ -132,10 +136,12 @@ UNKNOWN_TEMP = 0.0
 UNKNOWN_UNITS = 3276
 REQUEST_GET_MAIN = "_get_main"
 REQUEST_GET_CH = "_get_ch"
+REQUEST_GET_DHW = "_get_dhw"
 REQUEST_GET_ERROR = "_get_error"
 REQUEST_GET_GAS = "_get_gas"
 REQUEST_GET_OTHER = "_get_param"
 REQUEST_GET_UNITS = "_get_units"
+REQUEST_GET_CURRENCY = "_get_currency"
 
 REQUEST_SET_MAIN = "_set_main"
 REQUEST_SET_OTHER = "_set_param"
@@ -236,6 +242,8 @@ class AristonChecker():
         self._ariston_gas_data = {}
         self._ariston_error_data = {}
         self._ariston_ch_data = {}
+        self._ariston_dhw_data = {}
+        self._ariston_currency = {}
         self._ariston_other_data = {}
         self._ariston_units = {}
         self._data_lock = threading.Lock()
@@ -245,18 +253,22 @@ class AristonChecker():
         self._get_time_start = {
             REQUEST_GET_MAIN: 0,
             REQUEST_GET_CH: 0,
+            REQUEST_GET_DHW: 0,
             REQUEST_GET_ERROR: 0,
             REQUEST_GET_GAS: 0,
             REQUEST_GET_OTHER: 0,
-            REQUEST_GET_UNITS: 0
+            REQUEST_GET_UNITS: 0,
+            REQUEST_GET_CURRENCY: 0
         }
         self._get_time_end = {
             REQUEST_GET_MAIN: 0,
             REQUEST_GET_CH: 0,
+            REQUEST_GET_DHW: 0,
             REQUEST_GET_ERROR: 0,
             REQUEST_GET_GAS: 0,
             REQUEST_GET_OTHER: 0,
-            REQUEST_GET_UNITS: 0
+            REQUEST_GET_UNITS: 0,
+            REQUEST_GET_CURRENCY: 0
         }
         self._get_zero_temperature = {
             PARAM_CH_SET_TEMPERATURE: UNKNOWN_TEMP,
@@ -284,19 +296,23 @@ class AristonChecker():
             REQUEST_SET_OTHER: False,
             REQUEST_SET_UNITS: False
         }
-        self._set_main_retry = 0
-        self._set_param_retry = 0
-        self._set_units_retry = 0
+        self._set_retry = {
+            REQUEST_SET_MAIN: 0,
+            REQUEST_SET_OTHER: 0,
+            REQUEST_SET_UNITS: 0
+        }
         self._set_max_retries = retries
         self._set_new_data_pending = False
         self._set_scheduled = False
         self._set_time_start = {
             REQUEST_SET_MAIN: 0,
-            REQUEST_SET_OTHER: 0
+            REQUEST_SET_OTHER: 0,
+            REQUEST_SET_UNITS: 0
         }
         self._set_time_end = {
             REQUEST_SET_MAIN: 0,
-            REQUEST_SET_OTHER: 0
+            REQUEST_SET_OTHER: 0,
+            REQUEST_SET_UNITS: 0
         }
         self._store_file = store_file
         self._token_lock = threading.Lock()
@@ -334,11 +350,13 @@ class AristonChecker():
             except CommError:
                 _LOGGER.warning('%s Authentication communication error', self)
                 raise
+            """
             if self._store_file:
                 with open('/config/login_' + self._name + '_reply.json', 'w') as reply_file:
                     reply_file.write(resp.text)
                 with open('/config/login_' + self._name + '_redirect_url.json', 'w') as reply_file:
                     reply_file.write(resp.url)
+            """
             if resp.url.startswith(self._url + "/PlantDashboard/Index/") or resp.url.startswith(
                     self._url + "/PlantManagement/Index/") or resp.url.startswith(
                 self._url + "/PlantPreference/Index/") or resp.url.startswith(
@@ -643,6 +661,22 @@ class AristonChecker():
                 _LOGGER.warning("%s Invalid data received for units, not JSON", self)
                 raise CommError
 
+        elif request_type == REQUEST_GET_CURRENCY:
+            try:
+                self._ariston_currency = copy.deepcopy(resp.json())
+            except:
+                self._ariston_currency = {}
+                _LOGGER.warning("%s Invalid data received for currency, not JSON", self)
+                raise CommError
+
+        elif request_type == REQUEST_GET_DHW:
+            try:
+                self._ariston_dhw_data = copy.deepcopy(resp.json())
+            except:
+                self._ariston_dhw_data = {}
+                _LOGGER.warning("%s Invalid data received for DHW, not JSON", self)
+                raise CommError
+
         self._get_time_end[request_type] = time.time()
 
         if self._store_file:
@@ -651,6 +685,8 @@ class AristonChecker():
                     json.dump(self._ariston_data, ariston_fetched)
                 elif request_type == REQUEST_GET_CH:
                     json.dump(self._ariston_ch_data, ariston_fetched)
+                elif request_type == REQUEST_GET_DHW:
+                    json.dump(self._ariston_dhw_data, ariston_fetched)
                 elif request_type == REQUEST_GET_ERROR:
                     json.dump(self._ariston_error_data, ariston_fetched)
                 elif request_type == REQUEST_GET_GAS:
@@ -659,6 +695,8 @@ class AristonChecker():
                     json.dump(self._ariston_other_data, ariston_fetched)
                 elif request_type == REQUEST_GET_UNITS:
                     json.dump(self._ariston_units, ariston_fetched)
+                elif request_type == REQUEST_GET_CURRENCY:
+                    json.dump(self._ariston_currency, ariston_fetched)
             with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
                 json.dump(self._get_zero_temperature, ariston_fetched)
             with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:
@@ -682,6 +720,9 @@ class AristonChecker():
                 if request_type == REQUEST_GET_CH:
                     url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
                     http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
+                elif request_type == REQUEST_GET_DHW:
+                    url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=Dhw&umsys=si'
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 elif request_type == REQUEST_GET_ERROR:
                     url_get = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
                               '?$inlinecount=allpages&$skip=0&$top=100'
@@ -690,16 +731,26 @@ class AristonChecker():
                     url_get = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
                     http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 elif request_type == REQUEST_GET_OTHER:
-                    ids_to_fetch = ",".join(map(str, ARISTON_PARAM_LIST))
+                    list_to_send = ARISTON_PARAM_LIST.copy()
+                    try:
+                        if self._ariston_data["dhwBoilerPresent"]:
+                            list_to_send.append(ARISTON_THERMAL_CLEANSE_FUNCTION)
+                            list_to_send.append(ARISTON_THERMAL_CLEANSE_CYCLE)
+                    except:
+                        pass
+                    ids_to_fetch = ",".join(map(str, list_to_send))
                     url_get = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
                               '&umsys=si'
-                    http_timeout = HTTP_TIMEOUT_GET_SMALL
+                    http_timeout = HTTP_TIMEOUT_GET_LONG
                 elif request_type == REQUEST_GET_UNITS:
                     url_get = self._url + '/PlantPreference/GetData/' + self._plant_id
-                    http_timeout = HTTP_TIMEOUT_GET_SMALL * self._polling
+                    http_timeout = HTTP_TIMEOUT_GET_SHORT * self._polling
+                elif request_type == REQUEST_GET_CURRENCY:
+                    url_get = self._url + '/Metering/GetCurrencySettings/' + self._plant_id
+                    http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
                 else:
                     url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
-                    http_timeout = HTTP_TIMEOUT_GET * self._polling
+                    http_timeout = HTTP_TIMEOUT_GET_LONG * self._polling
                 with self._data_lock:
                     try:
                         self._get_time_start[request_type] = time.time()
@@ -729,59 +780,40 @@ class AristonChecker():
             else:
                 retry_in = HTTP_RETRY_INTERVAL * self._polling
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
+
             # schedule main read
             track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=retry_in))
-            # schedule all other requests
-            if self._set_param_group[REQUEST_SET_OTHER] and not self._set_param_group[REQUEST_SET_MAIN]:
+
+            # schedule other parameters read
+            retry_in = HTTP_PARAM_DELAY * self._polling
+            track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=retry_in))
+
+            # schedule error read
+            retry_in = 2 * HTTP_PARAM_DELAY * self._polling
+            track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=retry_in))
+
+            # read all remaining data
+            retry_in = 3 * HTTP_PARAM_DELAY * self._polling
+            if self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN] and not \
+                    self._set_param_group[REQUEST_SET_OTHER]:
                 # parameters being set, ask more frequently
-                track_point_in_time(self._hass, self._get_other_data,
-                                    dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-            elif self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN]:
-                # parameters being set, ask more frequently
-                track_point_in_time(self._hass, self._get_unit_data,
-                                    dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
+                track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=retry_in))
             else:
-                if self._get_request_number == 0:
-                    if self._units == VAL_AUTO:
-                        # schedule other parameters read
-                        track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(
-                            seconds=HTTP_PARAM_DELAY * self._polling + HTTP_TIMEOUT_GET_SMALL * 2))
-                        # schedule unit data read
-                        track_point_in_time(self._hass, self._get_unit_data,
-                                            dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                    else:
-                        # schedule other parameters read
-                        track_point_in_time(self._hass, self._get_other_data,
-                                            dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # schedule other parameters read every second request
-                elif self._get_request_number % 2 == 0:
-                    track_point_in_time(self._hass, self._get_other_data,
-                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # schedule error read
-                elif self._get_request_number == 1:
-                    track_point_in_time(self._hass, self._get_error_data,
-                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # schedule ch weekly data read
-                elif self._get_request_number == 3:
-                    track_point_in_time(self._hass, self._get_ch_data,
-                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # schedule gas use statistics read
-                elif self._get_request_number == 5:
-                    track_point_in_time(self._hass, self._get_gas_water_data,
-                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # schedule unit data read
-                elif self._get_request_number == 7:
-                    track_point_in_time(self._hass, self._get_unit_data,
-                                        dt_util.now() + timedelta(seconds=HTTP_PARAM_DELAY * self._polling))
-                # step request counter
-                if self._units == VAL_AUTO:
-                    request_loop = 5
-                else:
-                    request_loop = 7
-                if self._get_request_number < request_loop:
+                # other data is not that important, so just handle in queue
+                request_list = [
+                    self._get_unit_data,
+                    self._get_ch_data,
+                    self._get_dhw_data,
+                    self._get_gas_water_data,
+                    self._get_currency_data
+                ]
+                if self._get_request_number < len(request_list):
+                    track_point_in_time(self._hass, request_list[self._get_request_number],
+                                        dt_util.now() + timedelta(seconds=retry_in))
                     self._get_request_number += 1
-                else:
+                if self._get_request_number >= len(request_list):
                     self._get_request_number = 0
+
         try:
             self._get_http_data(REQUEST_GET_MAIN)
         except AristonError:
@@ -816,6 +848,10 @@ class AristonChecker():
         """Get Ariston CH data from http"""
         self._get_http_data(REQUEST_GET_CH)
 
+    def _get_dhw_data(self, dummy=None):
+        """Get Ariston DHW data from http"""
+        self._get_http_data(REQUEST_GET_DHW)
+
     def _get_other_data(self, dummy=None):
         """Get Ariston other data from http"""
         self._get_http_data(REQUEST_GET_OTHER)
@@ -823,6 +859,10 @@ class AristonChecker():
     def _get_unit_data(self, dummy=None):
         """Get Ariston unit data from http"""
         self._get_http_data(REQUEST_GET_UNITS)
+
+    def _get_currency_data(self, dummy=None):
+        """Get Ariston currency data from http"""
+        self._get_http_data(REQUEST_GET_CURRENCY)
 
     def _setting_http_data(self, set_data, request_type=""):
         """setting of data"""
@@ -884,17 +924,20 @@ class AristonChecker():
             else:
                 # initiated from set_http_data, no longer pending
                 self._set_new_data_pending = False
-                self._set_main_retry = 0
-                self._set_param_retry = 0
-                self._set_units_retry = 0
+                for request_item in self._set_retry:
+                    self._set_retry[request_item] = 0
                 if self._set_scheduled:
                     # we wait for another attempt after timeout, data will be set then
                     return
 
             if self._login and self.available and self._plant_id != "":
-                main_data_changed = False
-                param_data_changed = False
-                units_data_changed = False
+
+                changed_parameter = {
+                    REQUEST_SET_MAIN: False,
+                    REQUEST_SET_OTHER: False,
+                    REQUEST_SET_UNITS: False
+                }
+
                 set_data = {}
                 # prepare setting of main data dictionary
                 set_data["NewValue"] = copy.deepcopy(self._ariston_data)
@@ -968,10 +1011,10 @@ class AristonChecker():
                             del self._set_param[PARAM_MODE]
                         else:
                             # assume data was not yet changed
-                            main_data_changed = True
+                            changed_parameter[REQUEST_SET_MAIN] = True
                     else:
                         set_data["NewValue"]["mode"] = self._set_param[PARAM_MODE]
-                        main_data_changed = True
+                        changed_parameter[REQUEST_SET_MAIN] = True
 
                 if PARAM_DHW_SET_TEMPERATURE in self._set_param:
                     if set_data["NewValue"]["dhwTemp"]["value"] == self._set_param[PARAM_DHW_SET_TEMPERATURE]:
@@ -981,10 +1024,10 @@ class AristonChecker():
                             del self._set_param[PARAM_DHW_SET_TEMPERATURE]
                         else:
                             # assume data was not yet changed
-                            main_data_changed = True
+                            changed_parameter[REQUEST_SET_MAIN] = True
                     else:
                         set_data["NewValue"]["dhwTemp"]["value"] = self._set_param[PARAM_DHW_SET_TEMPERATURE]
-                        main_data_changed = True
+                        changed_parameter[REQUEST_SET_MAIN] = True
 
                 if PARAM_DHW_COMFORT_TEMPERATURE in self._set_param:
                     if dhw_temp[PARAM_DHW_COMFORT_TEMPERATURE] == self._set_param[PARAM_DHW_COMFORT_TEMPERATURE]:
@@ -998,14 +1041,14 @@ class AristonChecker():
                                 "newValue": self._set_param[PARAM_DHW_COMFORT_TEMPERATURE],
                                 "oldValue": set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"]}
                             set_param_data.append(param_data)
-                            param_data_changed = True
+                            changed_parameter[REQUEST_SET_OTHER] = True
                     else:
                         param_data = {
                             "id": ARISTON_DHW_TIME_PROG_COMFORT,
                             "newValue": self._set_param[PARAM_DHW_COMFORT_TEMPERATURE],
                             "oldValue": set_data["NewValue"]["dhwTimeProgComfortTemp"]["value"]}
                         set_param_data.append(param_data)
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
 
                 if PARAM_DHW_ECONOMY_TEMPERATURE in self._set_param:
                     if dhw_temp[PARAM_DHW_ECONOMY_TEMPERATURE] == self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE]:
@@ -1019,14 +1062,14 @@ class AristonChecker():
                                 "newValue": self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE],
                                 "oldValue": set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"]}
                             set_param_data.append(param_data)
-                            param_data_changed = True
+                            changed_parameter[REQUEST_SET_OTHER] = True
                     else:
                         param_data = {
                             "id": ARISTON_DHW_TIME_PROG_ECONOMY,
                             "newValue": self._set_param[PARAM_DHW_ECONOMY_TEMPERATURE],
                             "oldValue": set_data["NewValue"]["dhwTimeProgEconomyTemp"]["value"]}
                         set_param_data.append(param_data)
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
 
                 if PARAM_DHW_COMFORT_FUNCTION in self._set_param:
                     try:
@@ -1043,7 +1086,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_DHW_COMFORT_FUNCTION],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1051,10 +1094,10 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_DHW_COMFORT_FUNCTION],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_INTERNET_TIME in self._set_param:
@@ -1072,7 +1115,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_INTERNET_TIME],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1080,10 +1123,10 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_INTERNET_TIME],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_INTERNET_WEATHER in self._set_param:
@@ -1101,7 +1144,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_INTERNET_WEATHER],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1109,10 +1152,70 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_INTERNET_WEATHER],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
+                        pass
+
+                if PARAM_THERMAL_CLEANSE_CYCLE in self._set_param:
+                    try:
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_THERMAL_CLEANSE_CYCLE:
+                                if param_item["value"] == self._set_param[PARAM_THERMAL_CLEANSE_CYCLE]:
+                                    if self._set_time_start[REQUEST_SET_OTHER] < self._get_time_end[
+                                        REQUEST_GET_OTHER]:
+                                        # value should be up to date and match to remove from setting
+                                        del self._set_param[PARAM_THERMAL_CLEANSE_CYCLE]
+                                    else:
+                                        # assume data was not yet changed
+                                        param_data = {
+                                            "id": ARISTON_THERMAL_CLEANSE_CYCLE,
+                                            "newValue": self._set_param[PARAM_THERMAL_CLEANSE_CYCLE],
+                                            "oldValue": param_item["value"]}
+                                        set_param_data.append(param_data)
+                                        changed_parameter[REQUEST_SET_OTHER] = True
+                                    break
+                                else:
+                                    param_data = {
+                                        "id": ARISTON_THERMAL_CLEANSE_CYCLE,
+                                        "newValue": self._set_param[PARAM_THERMAL_CLEANSE_CYCLE],
+                                        "oldValue": param_item["value"]}
+                                    set_param_data.append(param_data)
+                                    changed_parameter[REQUEST_SET_OTHER] = True
+                                    break
+                    except:
+                        changed_parameter[REQUEST_SET_OTHER] = True
+                        pass
+
+                if PARAM_THERMAL_CLEANSE_FUNCTION in self._set_param:
+                    try:
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
+                                if param_item["value"] == self._set_param[PARAM_THERMAL_CLEANSE_FUNCTION]:
+                                    if self._set_time_start[REQUEST_SET_OTHER] < self._get_time_end[
+                                        REQUEST_GET_OTHER]:
+                                        # value should be up to date and match to remove from setting
+                                        del self._set_param[PARAM_THERMAL_CLEANSE_FUNCTION]
+                                    else:
+                                        # assume data was not yet changed
+                                        param_data = {
+                                            "id": ARISTON_THERMAL_CLEANSE_FUNCTION,
+                                            "newValue": self._set_param[PARAM_THERMAL_CLEANSE_FUNCTION],
+                                            "oldValue": param_item["value"]}
+                                        set_param_data.append(param_data)
+                                        changed_parameter[REQUEST_SET_OTHER] = True
+                                    break
+                                else:
+                                    param_data = {
+                                        "id": ARISTON_THERMAL_CLEANSE_FUNCTION,
+                                        "newValue": self._set_param[PARAM_THERMAL_CLEANSE_FUNCTION],
+                                        "oldValue": param_item["value"]}
+                                    set_param_data.append(param_data)
+                                    changed_parameter[REQUEST_SET_OTHER] = True
+                                    break
+                    except:
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_CH_AUTO_FUNCTION in self._set_param:
@@ -1130,7 +1233,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_CH_AUTO_FUNCTION],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1138,10 +1241,10 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_CH_AUTO_FUNCTION],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_CH_SET_TEMPERATURE in self._set_param:
@@ -1153,10 +1256,10 @@ class AristonChecker():
                             del self._set_param[PARAM_CH_SET_TEMPERATURE]
                         else:
                             # assume data was not yet changed
-                            main_data_changed = True
+                            changed_parameter[REQUEST_SET_MAIN] = True
                     else:
                         set_data["NewValue"]["zone"]["comfortTemp"]["value"] = self._set_param[PARAM_CH_SET_TEMPERATURE]
-                        main_data_changed = True
+                        changed_parameter[REQUEST_SET_MAIN] = True
 
                 if PARAM_CH_COMFORT_TEMPERATURE in self._set_param:
                     try:
@@ -1173,7 +1276,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_CH_COMFORT_TEMPERATURE],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1181,10 +1284,10 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_CH_COMFORT_TEMPERATURE],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_CH_ECONOMY_TEMPERATURE in self._set_param:
@@ -1202,7 +1305,7 @@ class AristonChecker():
                                             "newValue": self._set_param[PARAM_CH_ECONOMY_TEMPERATURE],
                                             "oldValue": param_item["value"]}
                                         set_param_data.append(param_data)
-                                        param_data_changed = True
+                                        changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                                 else:
                                     param_data = {
@@ -1210,10 +1313,10 @@ class AristonChecker():
                                         "newValue": self._set_param[PARAM_CH_ECONOMY_TEMPERATURE],
                                         "oldValue": param_item["value"]}
                                     set_param_data.append(param_data)
-                                    param_data_changed = True
+                                    changed_parameter[REQUEST_SET_OTHER] = True
                                     break
                     except:
-                        param_data_changed = True
+                        changed_parameter[REQUEST_SET_OTHER] = True
                         pass
 
                 if PARAM_CH_MODE in self._set_param:
@@ -1223,10 +1326,10 @@ class AristonChecker():
                             del self._set_param[PARAM_CH_MODE]
                         else:
                             # assume data was not yet changed
-                            main_data_changed = True
+                            changed_parameter[REQUEST_SET_MAIN] = True
                     else:
                         set_data["NewValue"]["zone"]["mode"]["value"] = self._set_param[PARAM_CH_MODE]
-                        main_data_changed = True
+                        changed_parameter[REQUEST_SET_MAIN] = True
 
                 if PARAM_DHW_MODE in self._set_param:
                     if set_data["NewValue"]["dhwMode"] == self._set_param[PARAM_DHW_MODE]:
@@ -1235,10 +1338,10 @@ class AristonChecker():
                             del self._set_param[PARAM_DHW_MODE]
                         else:
                             # assume data was not yet changed
-                            main_data_changed = True
+                            changed_parameter[REQUEST_SET_MAIN] = True
                     else:
                         set_data["NewValue"]["dhwMode"] = self._set_param[PARAM_DHW_MODE]
-                        main_data_changed = True
+                        changed_parameter[REQUEST_SET_MAIN] = True
 
                 if PARAM_UNITS in self._set_param:
                     if set_units_data["measurementSystem"] == self._set_param[PARAM_UNITS]:
@@ -1247,58 +1350,37 @@ class AristonChecker():
                             del self._set_param[PARAM_UNITS]
                         else:
                             # assume data was not yet changed
-                            units_data_changed = True
+                            changed_parameter[REQUEST_SET_UNITS] = True
                     else:
                         set_units_data["measurementSystem"] = self._set_param[PARAM_UNITS]
-                        units_data_changed = True
+                        changed_parameter[REQUEST_SET_UNITS] = True
 
-                self._set_param_group[REQUEST_SET_MAIN] = main_data_changed
-                self._set_param_group[REQUEST_SET_OTHER] = param_data_changed
-                self._set_param_group[REQUEST_SET_UNITS] = units_data_changed
+                self._set_param_group = copy.deepcopy(changed_parameter)
 
-                if main_data_changed or param_data_changed or units_data_changed:
-                    if main_data_changed and self._set_main_retry < self._set_max_retries:
+                for something_changed in changed_parameter:
+                    if changed_parameter[something_changed]:
+                        if changed_parameter[something_changed] and self._set_retry[
+                            something_changed] < self._set_max_retries:
+                            # retry again after enough time
+                            retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
+                            track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
+                            self._set_retry[something_changed] += 1
+                            self._set_scheduled = True
+                            break
+                        else:
+                            self._set_param_group[something_changed] = False
 
-                        # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
-                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
-                        self._set_main_retry = self._set_main_retry + 1
-                        self._set_scheduled = True
-
-                    elif param_data_changed and self._set_param_retry < self._set_max_retries:
-
-                        # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
-                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
-                        self._set_param_retry = self._set_param_retry + 1
-                        self._set_scheduled = True
-
-                    elif units_data_changed and self._set_units_retry < self._set_max_retries:
-
-                        # retry again after enough time
-                        retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
-                        track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
-                        self._set_units_retry = self._set_units_retry + 1
-                        self._set_scheduled = True
-
-                    else:
-                        # no more retries, no need to keep changed data
-                        self._set_param = {}
-                        for request_item in self._set_param_group:
-                            self._set_param_group[request_item] = False
-
-                else:
+                if True not in self._set_param_group.values():
+                    # no more retries or no changes, no need to keep any changed data
                     self._set_param = {}
-                    for request_item in self._set_param_group:
-                        self._set_param_group[request_item] = False
 
-                if main_data_changed:
+                if changed_parameter[REQUEST_SET_MAIN]:
                     try:
                         self._setting_http_data(set_data, REQUEST_SET_MAIN)
                     except:
                         pass
 
-                elif param_data_changed:
+                elif changed_parameter[REQUEST_SET_OTHER]:
 
                     try:
                         if set_param_data != []:
@@ -1309,7 +1391,7 @@ class AristonChecker():
                     except:
                         pass
 
-                elif units_data_changed:
+                elif changed_parameter[REQUEST_SET_UNITS]:
                     try:
                         self._setting_http_data(set_units_data, REQUEST_SET_UNITS)
                     except:
@@ -1320,19 +1402,19 @@ class AristonChecker():
             else:
                 # api is down
                 if not self._set_scheduled:
-                    if self._set_main_retry < self._set_max_retries:
+                    if self._set_retry[REQUEST_SET_MAIN] < self._set_max_retries:
                         # retry again after enough time to fetch data twice
                         retry_time = dt_util.now() + timedelta(seconds=HTTP_SET_INTERVAL * self._polling)
                         track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
-                        self._set_main_retry = self._set_main_retry + 1
+                        self._set_retry[REQUEST_SET_MAIN] += 1
                         self._set_scheduled = True
-                else:
-                    # no more retries, no need to keep changed data
-                    self._set_param = {}
-                    for request_item in self._set_param_group:
-                        self._set_param_group[request_item] = False
-                    _LOGGER.warning("%s No stable connection to set the data", self)
-                    raise CommError
+                    else:
+                        # no more retries, no need to keep changed data
+                        self._set_param = {}
+                        for request_item in self._set_param_group:
+                            self._set_param_group[request_item] = False
+                        _LOGGER.warning("%s No stable connection to set the data", self)
+                        raise CommError
 
     def set_http_data(self, parameter_list={}):
         """Set Ariston data over http after data verification"""
@@ -1360,8 +1442,9 @@ class AristonChecker():
                     try:
                         # round to nearest 1
                         temperature = round(float(wanted_dhw_temperature))
-                        if temperature >= self._ariston_data["dhwTemp"]["min"] and temperature <= \
-                                self._ariston_data["dhwTemp"]["max"]:
+                        dhw_temp_min = self._ariston_data["dhwTimeProgEconomyTemp"]["min"]
+                        dhw_temp_max = self._ariston_data["dhwTimeProgEconomyTemp"]["max"]
+                        if temperature >= dhw_temp_min and temperature <= dhw_temp_max:
                             self._set_param[PARAM_DHW_SET_TEMPERATURE] = temperature
                             _LOGGER.info('%s New DHW temperature %s', self, temperature)
                         else:
@@ -1376,8 +1459,11 @@ class AristonChecker():
                     try:
                         # round to nearest 1
                         temperature = round(float(wanted_dhw_temperature))
-                        if temperature >= self._ariston_data["dhwTemp"]["min"] and temperature <= \
-                                self._ariston_data["dhwTemp"]["max"]:
+                        dhw_temp_min = max(self._ariston_data["dhwTemp"]["min"],
+                                           self._ariston_data["dhwTimeProgComfortTemp"]["min"])
+                        dhw_temp_max = max(self._ariston_data["dhwTemp"]["max"],
+                                           self._ariston_data["dhwTimeProgComfortTemp"]["max"])
+                        if temperature >= dhw_temp_min and temperature <= dhw_temp_max:
                             self._set_param[PARAM_DHW_COMFORT_TEMPERATURE] = temperature
                             _LOGGER.info('%s New DHW scheduled comfort temperature %s', self, temperature)
                         else:
@@ -1528,6 +1614,54 @@ class AristonChecker():
                     except:
                         _LOGGER.warning('%s Unknown or unsupported Internet weather or key error: %s', self,
                                         wanted_internet_weather)
+                        pass
+
+                # check cleanse cycle
+                if PARAM_THERMAL_CLEANSE_CYCLE in parameter_list:
+                    wanted_cleanse_cycle = str(parameter_list[PARAM_THERMAL_CLEANSE_CYCLE]).lower()
+                    try:
+                        item_present = False
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_THERMAL_CLEANSE_CYCLE:
+                                cycle_min = param_item["min"]
+                                cycle_max = param_item["max"]
+                                if wanted_cleanse_cycle <= cycle_max and wanted_cleanse_cycle >= cycle_min:
+                                    self._set_param[PARAM_THERMAL_CLEANSE_CYCLE] = wanted_cleanse_cycle
+                                    item_present = True
+                                    _LOGGER.info('%s New Thermal Cleanse Cycle is %s', self, wanted_cleanse_cycle)
+                                else:
+                                    _LOGGER.warning('%s Unknown or unsupported Thermal Cleanse Cycle: %s', self,
+                                                    wanted_cleanse_cycle)
+                                break
+                        if not item_present:
+                            _LOGGER.warning('%s Can not set Thermal Cleanse Cycle: %s', self, wanted_cleanse_cycle)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported Thermal Cleanse Cycle or key error: %s', self,
+                                        wanted_cleanse_cycle)
+                        pass
+
+                # check cleanse function
+                if PARAM_THERMAL_CLEANSE_FUNCTION in parameter_list:
+                    wanted_cleanse_function = str(parameter_list[PARAM_THERMAL_CLEANSE_FUNCTION]).lower()
+                    try:
+                        item_present = False
+                        for param_item in self._ariston_other_data:
+                            if param_item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
+                                if wanted_cleanse_function in PARAM_STRING_TO_VALUE:
+                                    self._set_param[PARAM_THERMAL_CLEANSE_FUNCTION] = PARAM_STRING_TO_VALUE[
+                                        wanted_cleanse_function]
+                                    item_present = True
+                                    _LOGGER.info('%s New Thermal Cleanse Function is %s', self, wanted_cleanse_function)
+                                else:
+                                    _LOGGER.warning('%s Unknown or unsupported Thermal Cleanse Function: %s', self,
+                                                    wanted_cleanse_function)
+                                break
+                        if not item_present:
+                            _LOGGER.warning('%s Can not set Thermal Cleanse Function: %s', self,
+                                            wanted_cleanse_function)
+                    except:
+                        _LOGGER.warning('%s Unknown or unsupported Thermal Cleanse Function or key error: %s', self,
+                                        wanted_cleanse_function)
                         pass
 
                 # check CH auto function
@@ -1711,6 +1845,14 @@ def setup(hass, config):
                         data = call.data.get(PARAM_UNITS, "")
                         if data != "":
                             parameter_list[PARAM_UNITS] = data
+
+                        data = call.data.get(PARAM_THERMAL_CLEANSE_CYCLE, "")
+                        if data != "":
+                            parameter_list[PARAM_THERMAL_CLEANSE_CYCLE] = data
+
+                        data = call.data.get(PARAM_THERMAL_CLEANSE_FUNCTION, "")
+                        if data != "":
+                            parameter_list[PARAM_THERMAL_CLEANSE_FUNCTION] = data
 
                     _LOGGER.debug("device found, data to check and send")
 
