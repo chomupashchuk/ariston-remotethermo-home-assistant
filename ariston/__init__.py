@@ -788,31 +788,32 @@ class AristonChecker():
             retry_in = HTTP_PARAM_DELAY * self._polling
             track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=retry_in))
 
-            # schedule error read
-            retry_in = 2 * HTTP_PARAM_DELAY * self._polling
-            track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=retry_in))
+            if self._errors < MAX_ERRORS_TIMER_EXTEND:
+                # schedule error read
+                retry_in = 2 * HTTP_PARAM_DELAY * self._polling
+                track_point_in_time(self._hass, self._get_error_data, dt_util.now() + timedelta(seconds=retry_in))
 
-            # read all remaining data
-            retry_in = 3 * HTTP_PARAM_DELAY * self._polling
-            if self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN] and not \
-                    self._set_param_group[REQUEST_SET_OTHER]:
-                # parameters being set, ask more frequently
-                track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=retry_in))
-            else:
-                # other data is not that important, so just handle in queue
-                request_list = [
-                    self._get_unit_data,
-                    self._get_ch_data,
-                    self._get_dhw_data,
-                    self._get_gas_water_data,
-                    self._get_currency_data
-                ]
-                if self._get_request_number < len(request_list):
-                    track_point_in_time(self._hass, request_list[self._get_request_number],
-                                        dt_util.now() + timedelta(seconds=retry_in))
-                    self._get_request_number += 1
-                if self._get_request_number >= len(request_list):
-                    self._get_request_number = 0
+                # read all remaining data
+                retry_in = 3 * HTTP_PARAM_DELAY * self._polling
+                if self._set_param_group[REQUEST_SET_UNITS] and not self._set_param_group[REQUEST_SET_MAIN] and not \
+                        self._set_param_group[REQUEST_SET_OTHER]:
+                    # parameters being set, ask more frequently
+                    track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=retry_in))
+                else:
+                    # other data is not that important, so just handle in queue
+                    request_list = [
+                        self._get_unit_data,
+                        self._get_ch_data,
+                        self._get_dhw_data,
+                        self._get_gas_water_data,
+                        self._get_currency_data
+                    ]
+                    if self._get_request_number < len(request_list):
+                        track_point_in_time(self._hass, request_list[self._get_request_number],
+                                            dt_util.now() + timedelta(seconds=retry_in))
+                        self._get_request_number += 1
+                    if self._get_request_number >= len(request_list):
+                        self._get_request_number = 0
 
         try:
             self._get_http_data(REQUEST_GET_MAIN)
