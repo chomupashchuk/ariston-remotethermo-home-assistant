@@ -108,6 +108,8 @@ from .switch import SWITCHES
 """HTTP_TIMEOUT_SET is timeout to set data"""
 
 ARISTON_URL = "https://www.ariston-net.remotethermo.com"
+GITHUB_LATEST_RELEASE = 'https://api.github.com/repos/chomupashchuk/ariston-remotethermo-home-assistant/releases/latest'
+
 DEFAULT_HVAC = VAL_SUMMER
 DEFAULT_POWER_ON = VAL_SUMMER
 DEFAULT_NAME = "Ariston"
@@ -142,6 +144,7 @@ REQUEST_GET_GAS = "_get_gas"
 REQUEST_GET_OTHER = "_get_param"
 REQUEST_GET_UNITS = "_get_units"
 REQUEST_GET_CURRENCY = "_get_currency"
+REQUEST_GET_VERSION = "_get_version"
 
 REQUEST_SET_MAIN = "_set_main"
 REQUEST_SET_OTHER = "_set_param"
@@ -258,7 +261,8 @@ class AristonChecker():
             REQUEST_GET_GAS: 0,
             REQUEST_GET_OTHER: 0,
             REQUEST_GET_UNITS: 0,
-            REQUEST_GET_CURRENCY: 0
+            REQUEST_GET_CURRENCY: 0,
+            REQUEST_GET_VERSION: 0
         }
         self._get_time_end = {
             REQUEST_GET_MAIN: 0,
@@ -268,7 +272,8 @@ class AristonChecker():
             REQUEST_GET_GAS: 0,
             REQUEST_GET_OTHER: 0,
             REQUEST_GET_UNITS: 0,
-            REQUEST_GET_CURRENCY: 0
+            REQUEST_GET_CURRENCY: 0,
+            REQUEST_GET_VERSION: 0
         }
         self._get_zero_temperature = {
             PARAM_CH_SET_TEMPERATURE: UNKNOWN_TEMP,
@@ -321,6 +326,7 @@ class AristonChecker():
         self._url = ARISTON_URL
         self._user = username
         self._verify = True
+        self._version = ""
 
     @property
     def available(self):
@@ -677,6 +683,13 @@ class AristonChecker():
                 _LOGGER.warning("%s Invalid data received for DHW, not JSON", self)
                 raise CommError
 
+        elif request_type == REQUEST_GET_VERSION:
+            try:
+                self._version = resp.json()["tag_name"]
+            except:
+                self._version = ""
+                _LOGGER.warning("%s Invalid version fetched", self)
+
         self._get_time_end[request_type] = time.time()
 
         if self._store_file:
@@ -748,6 +761,9 @@ class AristonChecker():
                 elif request_type == REQUEST_GET_CURRENCY:
                     url_get = self._url + '/Metering/GetCurrencySettings/' + self._plant_id
                     http_timeout = HTTP_TIMEOUT_GET_MEDIUM * self._polling
+                elif request_type == REQUEST_GET_VERSION:
+                    url_get = GITHUB_LATEST_RELEASE
+                    http_timeout = HTTP_TIMEOUT_GET_SHORT
                 else:
                     url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                     http_timeout = HTTP_TIMEOUT_GET_LONG * self._polling
@@ -803,6 +819,7 @@ class AristonChecker():
                     # other data is not that important, so just handle in queue
                     request_list = [
                         self._get_unit_data,
+                        self._get_version_data,
                         self._get_ch_data,
                         self._get_dhw_data,
                         self._get_gas_water_data,
@@ -864,6 +881,10 @@ class AristonChecker():
     def _get_currency_data(self, dummy=None):
         """Get Ariston currency data from http"""
         self._get_http_data(REQUEST_GET_CURRENCY)
+
+    def _get_version_data(self, dummy=None):
+        """Get Ariston version from GitHub"""
+        self._get_http_data(REQUEST_GET_VERSION)
 
     def _setting_http_data(self, set_data, request_type=""):
         """setting of data"""

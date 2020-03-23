@@ -1,5 +1,7 @@
 """Constants for Ariston component."""
 
+VERSION = "1.2.2"
+
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
 SENSOR_ACCOUNT_CH_ELECTRICITY = "Account CH Electricity Use"
@@ -48,6 +50,7 @@ BINARY_SENSOR_INTERNET_TIME = "Internet Time"
 BINARY_SENSOR_INTERNET_WEATHER = "Internet Weather"
 BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION = "Thermal Cleanse Function"
 BINARY_SENSOR_CH_PILOT = "CH Pilot"
+BINARY_SENSOR_UPDATE = "Update Available"
 
 SWITCH_POWER = "Power"
 
@@ -139,6 +142,7 @@ PARAM_ONLINE = "online"
 PARAM_CHANGING_DATA = "changing_data"
 PARAM_THERMAL_CLEANSE_FUNCTION = "dhw_thermal_cleanse_function"
 PARAM_CH_PILOT = "ch_pilot"
+PARAM_UPDATE = "update"
 
 # switches
 PARAM_POWER = "power"

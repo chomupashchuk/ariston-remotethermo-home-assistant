@@ -29,6 +29,7 @@ from .const import (
     PARAM_CH_FLAME,
     PARAM_THERMAL_CLEANSE_FUNCTION,
     PARAM_CH_PILOT,
+    PARAM_UPDATE,
     BINARY_SENSOR_HOLIDAY_MODE,
     BINARY_SENSOR_ONLINE,
     BINARY_SENSOR_FLAME,
@@ -40,6 +41,8 @@ from .const import (
     BINARY_SENSOR_CH_FLAME,
     BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION,
     BINARY_SENSOR_CH_PILOT,
+    BINARY_SENSOR_UPDATE,
+    VERSION,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -64,6 +67,7 @@ BINARY_SENSORS = {
     PARAM_INTERNET_WEATHER: (BINARY_SENSOR_INTERNET_WEATHER, None, "mdi:weather-partly-cloudy"),
     PARAM_THERMAL_CLEANSE_FUNCTION: (BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION, None, "mdi:allergy"),
     PARAM_CH_PILOT: (BINARY_SENSOR_CH_PILOT, None, "mdi:head-cog-outline"),
+    PARAM_UPDATE: (BINARY_SENSOR_UPDATE, None, "mdi:package-down"),
 }
 
 
@@ -132,6 +136,9 @@ class AristonBinarySensor(BinarySensorDevice):
             PARAM_CH_AUTO_FUNCTION,
             PARAM_THERMAL_CLEANSE_FUNCTION]:
             return self._api.available and self._api._ariston_other_data != {}
+        elif self._sensor_type in [
+            PARAM_UPDATE]:
+            return self._api._version != ""
         else:
             return self._sensor_type == PARAM_ONLINE or self._api.available
 
@@ -238,6 +245,34 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = self._api._ariston_data["zone"]["heatRequest"]
                 except:
                     self._state = False
+                    pass
+
+            elif self._sensor_type == PARAM_UPDATE:
+                self._state = False
+                self._attrs = {}
+                self._attrs["Installed"] = VERSION
+                try:
+                    if self._api._version != "":
+                        self._attrs["Git Version"] = self._api._version
+                        web_version = self._api._version.split(".")
+                        installed_version = VERSION.split(".")
+                        web_symbols = len(web_version)
+                        installed_symbols = len(installed_version)
+                        if web_symbols <= installed_symbols:
+                            # same amount of symbols to check, update available if web has higher value
+                            for symbol in range(0, web_symbols):
+                                if int(web_version[symbol]) > int(installed_version[symbol]):
+                                    self._state = True
+                                    break
+                        else:
+                            # same amount of symbols to check, update available if web has higher value
+                            # or if symbols match but web has additional last symbol
+                            for symbol in range(0, installed_symbols):
+                                if int(web_version[symbol]) > int(installed_version[symbol]):
+                                    self._state = True
+                                    break
+                            self._state = True
+                except:
                     pass
 
         except AristonError as error:
