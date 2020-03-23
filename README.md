@@ -114,6 +114,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `internet_time` - if time from the internet is used.
   - `internet_weather` - if weather from the internet is used.
   - `online` - online status.
+  - `update` - if update is available for the integration.
 
 
 ### Example of configuration.yaml entry
