@@ -710,6 +710,8 @@ class AristonChecker():
                     json.dump(self._ariston_units, ariston_fetched)
                 elif request_type == REQUEST_GET_CURRENCY:
                     json.dump(self._ariston_currency, ariston_fetched)
+                elif request_type == REQUEST_GET_VERSION:
+                    ariston_fetched.write(self._version)
             with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
                 json.dump(self._get_zero_temperature, ariston_fetched)
             with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:

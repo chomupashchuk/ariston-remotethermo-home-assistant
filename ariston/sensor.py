@@ -648,38 +648,46 @@ class AristonSensor(Entity):
 
             elif self._sensor_type == PARAM_GAS_TYPE:
                 try:
-                    self._state = self._api._ariston_currency["gasTypeOptions"][self._api._ariston_currency["gasType"]][
-                        "text"]
-                    self._unit_of_measurement = \
-                        self._api._ariston_currency["gasEnergyUnitOptions"][
-                            self._api._ariston_currency["gasEnergyUnit"]][
-                            "text"]
+                    type_fetch = next((item for item in self._api._ariston_currency["gasTypeOptions"] if
+                                       item["value"] == self._api._ariston_currency["gasType"]), {})
+                    currency_fetch = next((item for item in self._api._ariston_currency["gasEnergyUnitOptions"] if
+                                       item["value"] == self._api._ariston_currency["gasEnergyUnit"]), {})
+                    self._state = type_fetch["text"]
+                    self._unit_of_measurement = currency_fetch["text"]
                 except:
                     self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_GAS_COST:
+                self._attrs = {}
                 try:
-                    self._state = self._api._ariston_currency["gasCost"]
-                    self._unit_of_measurement = \
-                        self._api._ariston_currency["currencySymbols"][self._api._ariston_currency["currency"] - 1][
-                            "Value"]
-                    self._attrs["Description"] = \
-                        self._api._ariston_currency["currencyOptions"][self._api._ariston_currency["currency"] - 1][
-                            "Value"]
+                    currency_symbol = next((item for item in self._api._ariston_currency["currencySymbols"] if
+                                           item["Key"] == self._api._ariston_currency["currency"]), {})
+                    currency_description = next((item for item in self._api._ariston_currency["currencyOptions"] if
+                                            item["value"] == self._api._ariston_currency["currency"]), {})
+                    if self._api._ariston_currency["gasCost"] == None:
+                        self._state = VAL_UNKNOWN
+                    else:
+                        self._state = str(self._api._ariston_currency["gasCost"])
+                    self._unit_of_measurement = currency_symbol["Value"]
+                    self._attrs["currency"] = currency_description["text"]
                 except:
                     self._state = VAL_UNKNOWN
                     pass
 
             elif self._sensor_type == PARAM_ELECTRICITY_COST:
+                self._attrs = {}
                 try:
-                    self._state = self._api._ariston_currency["electricityCost"]
-                    self._unit_of_measurement = \
-                        self._api._ariston_currency["currencySymbols"][self._api._ariston_currency["currency"] - 1][
-                            "Value"]
-                    self._attrs["Description"] = \
-                        self._api._ariston_currency["currencyOptions"][self._api._ariston_currency["currency"] - 1][
-                            "Value"]
+                    currency_symbol = next((item for item in self._api._ariston_currency["currencySymbols"] if
+                                           item["Key"] == self._api._ariston_currency["currency"]), {})
+                    currency_description = next((item for item in self._api._ariston_currency["currencyOptions"] if
+                                            item["value"] == self._api._ariston_currency["currency"]), {})
+                    if self._api._ariston_currency["gasCost"] == None:
+                        self._state = VAL_UNKNOWN
+                    else:
+                        self._state = str(self._api._ariston_currency["electricityCost"])
+                    self._unit_of_measurement = currency_symbol["Value"]
+                    self._attrs["currency"] = currency_description["text"]
                 except:
                     self._state = VAL_UNKNOWN
                     pass
