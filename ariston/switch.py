@@ -25,6 +25,15 @@ from .const import (
     BINARY_SENSOR_INTERNET_WEATHER,
     BINARY_SENSOR_CH_AUTO_FUNCTION,
     BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION,
+    GET_REQUEST_CH_PROGRAM,
+    GET_REQUEST_CURRENCY,
+    GET_REQUEST_DHW_PROGRAM,
+    GET_REQUEST_ERRORS,
+    GET_REQUEST_GAS,
+    GET_REQUEST_MAIN,
+    GET_REQUEST_PARAM,
+    GET_REQUEST_UNITS,
+    GET_REQUEST_VERSION,
 )
 
 STATE_SCAN_INTERVAL_SECS = 3
@@ -87,11 +96,7 @@ class AristonSwitch(SwitchDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._switch_type in [
-            PARAM_INTERNET_TIME,
-            PARAM_INTERNET_WEATHER,
-            PARAM_CH_AUTO_FUNCTION,
-            PARAM_THERMAL_CLEANSE_FUNCTION]:
+        if self._switch_type in GET_REQUEST_PARAM:
             return self._api.available and self._api._ariston_other_data != {}
         else:
             return self._api.available

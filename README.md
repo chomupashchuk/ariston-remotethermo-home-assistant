@@ -5,8 +5,8 @@ You are free to modify and distribute it, but it is distributed 'as is' with no 
 Cimate and Water Heater components have presets to switch between `off`, `summer` and `winter` in order to be able to control boiler from one entity.
 
 ## Integration slow nature
-In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 2 to 10 minutes with possible skip if some data was changed or communication error. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
-Setting of data is perfomed immediately on request with attempts scheduled to every 2.5 minutes (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
+In order not to interfere with other applications (official Ariston applications via android or web, and Google Home) fetching of data has timers to read data from 1 to 16 minutes depending on configuration with possible skip if some data was changed or communication error. Interfereing with other application causes their timeouts and occasionally gateway disconnection from the internet or hanging for long periods of time, thus decrease of retry intervals is not recommended.
+Setting of data is perfomed immediately on request with attempts scheduled to every 2.5 to 3.3 minutes depending on configuration (see `max_retries` for number of retries) while checking latest fetched data to determine if setting was successful or not. If new request comes during setting procedure, it shall be processed during next scheduled attempt.
 Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
@@ -56,7 +56,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `store_config_files` - `true` or `false` indicating if configuration `json` files to be stored in `/config` folder. Can be used for troubleshooting purposes for example. Default value is `false`.
   - `control_from_water_heater` - if `water_heater` entity will have controling parameters like `summer` or `winter` or `off` as part of operations. Default value is `false`.
   - `units` - which uniots to be used. Values are: `metric` (°C-bar-kW...), `imperial` (°F-psi-kBtu/h...), `auto` (detect automatically, which takes additional time). Default is `metric`.
-  - `polling_rate` - indicates times it takes to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies, which might be beneficial in case of slow Ariston responces, but can affect other http requests in Home Assistant. Default is `normal`.
+  - `polling_rate` - indicates timers to be used to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies and longer delays between the requests, which might be beneficial in case of slow Ariston responces due to internet connection for example. Default is `normal` to have faster responces.
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).

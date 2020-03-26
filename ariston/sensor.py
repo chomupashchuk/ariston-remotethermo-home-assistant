@@ -107,6 +107,15 @@ from .const import (
     SENSOR_GAS_TYPE,
     SENSOR_GAS_COST,
     SENSOR_ELECTRICITY_COST,
+    GET_REQUEST_CH_PROGRAM,
+    GET_REQUEST_CURRENCY,
+    GET_REQUEST_DHW_PROGRAM,
+    GET_REQUEST_ERRORS,
+    GET_REQUEST_GAS,
+    GET_REQUEST_MAIN,
+    GET_REQUEST_PARAM,
+    GET_REQUEST_UNITS,
+    GET_REQUEST_VERSION,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -294,41 +303,19 @@ class AristonSensor(Entity):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._sensor_type in [
-            PARAM_ERRORS]:
+        if self._sensor_type in GET_REQUEST_ERRORS:
             return self._api.available and self._api._ariston_error_data != {}
-        elif self._sensor_type in [
-            PARAM_CH_PROGRAM]:
+        elif self._sensor_type in GET_REQUEST_CH_PROGRAM:
             return self._api.available and self._api._ariston_ch_data != {}
-        elif self._sensor_type in [
-            PARAM_ACCOUNT_CH_GAS,
-            PARAM_ACCOUNT_CH_ELECTRICITY,
-            PARAM_ACCOUNT_DHW_GAS,
-            PARAM_ACCOUNT_DHW_ELECTRICITY,
-            PARAM_HEATING_LAST_24H,
-            PARAM_HEATING_LAST_7d,
-            PARAM_HEATING_LAST_30d,
-            PARAM_HEATING_LAST_365d,
-            PARAM_WATER_LAST_24H,
-            PARAM_WATER_LAST_7D,
-            PARAM_WATER_LAST_30D,
-            PARAM_WATER_LAST_365D]:
+        elif self._sensor_type in GET_REQUEST_GAS:
             return self._api.available and self._api._ariston_gas_data != {}
-        elif self._sensor_type in [
-            PARAM_DHW_COMFORT_FUNCTION,
-            PARAM_SIGNAL_STRENGTH,
-            PARAM_THERMAL_CLEANSE_CYCLE]:
+        elif self._sensor_type in GET_REQUEST_PARAM:
             return self._api.available and self._api._ariston_other_data != {}
-        elif self._sensor_type in [
-            PARAM_UNITS]:
+        elif self._sensor_type in GET_REQUEST_UNITS:
             return self._api.available and self._api._ariston_units != {}
-        elif self._sensor_type in [
-            PARAM_GAS_TYPE,
-            PARAM_GAS_COST,
-            PARAM_ELECTRICITY_COST]:
+        elif self._sensor_type in GET_REQUEST_CURRENCY:
             return self._api.available and self._api._ariston_currency != {}
-        elif self._sensor_type in [
-            PARAM_DHW_PROGRAM]:
+        elif self._sensor_type in GET_REQUEST_DHW_PROGRAM:
             return self._api.available and self._api._ariston_dhw_data != {}
         else:
             return self._api.available

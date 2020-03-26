@@ -43,6 +43,15 @@ from .const import (
     BINARY_SENSOR_CH_PILOT,
     BINARY_SENSOR_UPDATE,
     VERSION,
+    GET_REQUEST_CH_PROGRAM,
+    GET_REQUEST_CURRENCY,
+    GET_REQUEST_DHW_PROGRAM,
+    GET_REQUEST_ERRORS,
+    GET_REQUEST_GAS,
+    GET_REQUEST_MAIN,
+    GET_REQUEST_PARAM,
+    GET_REQUEST_UNITS,
+    GET_REQUEST_VERSION,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -130,14 +139,9 @@ class AristonBinarySensor(BinarySensorDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._sensor_type in [
-            PARAM_INTERNET_TIME,
-            PARAM_INTERNET_WEATHER,
-            PARAM_CH_AUTO_FUNCTION,
-            PARAM_THERMAL_CLEANSE_FUNCTION]:
+        if self._sensor_type in GET_REQUEST_PARAM:
             return self._api.available and self._api._ariston_other_data != {}
-        elif self._sensor_type in [
-            PARAM_UPDATE]:
+        elif self._sensor_type in GET_REQUEST_VERSION:
             return self._api._version != ""
         else:
             return self._sensor_type == PARAM_ONLINE or self._api.available
