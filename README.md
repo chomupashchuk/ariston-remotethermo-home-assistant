@@ -10,7 +10,7 @@ Setting of data is perfomed immediately on request with attempts scheduled to ev
 Monitoring change of configuration can be viewed via binary sensor `changing_data`.
 
 
-## Integration was tested on and work with:
+## Integration was tested on and works with:
   - Ariston Clas Evo
   - Ariston Genus One with Ariston BCH cylinder
   - Ariston Nimbus Flex
@@ -167,7 +167,7 @@ Since I use scanning of http requests towards web application, and web applicati
   - send me information on file name, sensor name (and short description) and parameter in json file that represents parameter. If parameter has values different from ON/OFF or TRUE/FALSE (for example 0, 1 ,5) please provide meaning behind each value. If my hardware does not support values i have no idea of how it should be represented.
 
 ### Sensors to be based on new requests (if cannot be covered by previous)
-Since my web application does not show more options due to heater caopabilities support, there are few options:
+Since my web application does not show more options due to heater capabilities support, there are few options:
   - install traffic analyzer (like fiddler) and connect it to web browser (like chrome) and follow `Guide_for_new_requests.doc`.
   - **Never share your password with strangers**. Provide me with login and password to do everything myself with your heater and change password after i have fond corresponding requests. 
   
