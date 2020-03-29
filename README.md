@@ -157,8 +157,8 @@ data:
     ch_comfort_temperature: 20.5
 ```
 
-## New localizations
-Please see files under `/ariston/.translations/` and take files like `backend.en.json` and `sensor.en.json` as a base. Create files with corresponding name that represent desired language and input translated data into created files in the right side (left side is internal values used by the integration). Then please provide me with mentioned 2 files in order to be included in the integration (to include new language in `LANG_LIST` within `const.py` and make it available for everyone). 
+## Provide New localizations
+Please see files under `/ariston/.translations/` and take files like `backend.en.json` and `sensor.en.json` as a base. Create files with corresponding name that represent desired language (must be compliant with BCP47) and input translated data into created files from the right side of the data (left side is internal values used by the integration and right side are the values to be shown in the frontend). Then please provide me with mentioned 2 files in order to be included in the integration (to include new language in `LANG_LIST` within `const.py` and make it available for everyone). 
 
 ## New sensors/services requests
 Since I use scanning of http requests towards web application, and web application provides only data supported by hardware, I can only test what my hardwre supports, which is very limited. So if you would like new sensors or service attributes please follow guides below. 
