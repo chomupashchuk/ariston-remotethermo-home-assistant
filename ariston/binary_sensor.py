@@ -143,8 +143,10 @@ class AristonBinarySensor(BinarySensorDevice):
             return self._api.available and self._api._ariston_other_data != {}
         elif self._sensor_type in GET_REQUEST_VERSION:
             return self._api._version != ""
+        elif self._sensor_type == PARAM_ONLINE:
+            return True
         else:
-            return self._sensor_type == PARAM_ONLINE or self._api.available
+            return self._api.available and self._api._ariston_data != {}
 
     @property
     def icon(self):

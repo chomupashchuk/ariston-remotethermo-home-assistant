@@ -33,7 +33,7 @@ from .const import (
     DEVICES,
     PARAM_CH_MODE,
     PARAM_MODE,
-    PARAM_CH_SET_TEMPERATURE,
+    PARAM_CH_COMFORT_TEMPERATURE,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_HEATING_ONLY,
@@ -42,6 +42,7 @@ from .const import (
     VAL_PROGRAM,
     VAL_HOLIDAY,
     VAL_OFFLINE,
+    VAL_NOT_READY,
     VAL_AUTO,
     VAL_METRIC,
     VAL_IMPERIAL,
@@ -241,7 +242,7 @@ class AristonThermostat(ClimateDevice):
             else:
                 curr_preset_mode = VAL_OFFLINE
         except:
-            curr_preset_mode = VAL_OFFLINE
+            curr_preset_mode = VAL_NOT_READY
             pass
         if curr_preset_mode in self._preset_translate:
             # translate current operation
@@ -307,7 +308,7 @@ class AristonThermostat(ClimateDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api.set_http_data({PARAM_CH_SET_TEMPERATURE: new_temperature})
+            self._api.set_http_data({PARAM_CH_COMFORT_TEMPERATURE: new_temperature})
 
     def update(self):
         """Update all Node data from Hive."""

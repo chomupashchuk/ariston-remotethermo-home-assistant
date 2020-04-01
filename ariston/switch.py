@@ -99,7 +99,7 @@ class AristonSwitch(SwitchDevice):
         if self._switch_type in GET_REQUEST_PARAM:
             return self._api.available and self._api._ariston_other_data != {}
         else:
-            return self._api.available
+            return self._api.available and self._api._ariston_data != {}
 
     @property
     def is_on(self):

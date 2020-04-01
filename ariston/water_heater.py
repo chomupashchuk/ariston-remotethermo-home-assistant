@@ -25,6 +25,7 @@ from .const import (
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
     PARAM_DHW_COMFORT_TEMPERATURE,
+    PARAM_DHW_ECONOMY_TEMPERATURE,
     PARAM_MODE,
     VAL_OFF,
     VAL_SUMMER,
@@ -35,6 +36,7 @@ from .const import (
     VAL_WINTER_PROGRAM,
     VAL_HEATING_ONLY,
     VAL_OFFLINE,
+    VAL_NOT_READY,
     VAL_MANUAL,
     VAL_PROGRAM,
     VAL_AUTO,
@@ -280,7 +282,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             else:
                 current_op = current_mode
         except:
-            current_op = VAL_OFFLINE
+            current_op = VAL_NOT_READY
             pass
         if current_op in self._operations_translate:
             # translate current operation
@@ -291,6 +293,14 @@ class AristonWaterHeater(WaterHeaterDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
+            try:
+                if VALUE_TO_DHW_MODE[self._api._ariston_data["dhwMode"]] == VAL_PROGRAM:
+                    if self._api._ariston_data["dhwTimeProgComfortActive"] == False:
+                        # economy temperature is being used
+                        self._api.set_http_data({PARAM_DHW_ECONOMY_TEMPERATURE: new_temperature})
+                        return
+            except:
+                pass
             self._api.set_http_data({PARAM_DHW_COMFORT_TEMPERATURE: new_temperature})
 
     def set_operation_mode(self, operation_mode):

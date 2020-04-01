@@ -2,6 +2,7 @@
     "climate_preset": {
         "heating_only": "Лише опалення",
         "holiday": "Відпустка",
+        "initiating": "Ініціалізування",
         "off": "Вимкнено",
         "offline": "Недоступно",
         "summer": "Літо",
@@ -9,6 +10,7 @@
     },
     "water_heater_operation": {
         "heating_only": "Лише опалення",
+        "initiating": "Ініціалізування",
         "manual": "Ручний",
         "off": "Вимкнено",
         "offline": "Недоступно",

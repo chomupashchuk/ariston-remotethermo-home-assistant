@@ -318,7 +318,7 @@ class AristonSensor(Entity):
         elif self._sensor_type in GET_REQUEST_DHW_PROGRAM:
             return self._api.available and self._api._ariston_dhw_data != {}
         else:
-            return self._api.available
+            return self._api.available and self._api._ariston_data != {}
 
     def update(self):
         """Get the latest data and updates the state."""

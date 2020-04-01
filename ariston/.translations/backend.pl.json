@@ -2,6 +2,7 @@
     "climate_preset": {
         "heating_only": "Tylko ogrzewanie",
         "holiday": "Wakacje",
+        "initiating": "Inicjowanie",
         "off": "Wyłączony",
         "offline": "Offline",
         "summer": "Lato",
@@ -9,6 +10,7 @@
     },
     "water_heater_operation": {
         "heating_only": "Tylko ogrzewanie",
+        "initiating": "Inicjowanie",
         "manual": "Ręczny",
         "off": "Wyłączony",
         "offline": "Offline",
