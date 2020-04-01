@@ -1610,6 +1610,8 @@ class AristonChecker():
                 if self._store_file:
                     with open('/config/data_' + self._name + '_all_set_get.json', 'w') as ariston_fetched:
                         json.dump(self._set_param_group, ariston_fetched)
+                    with open('/config/data_' + self._name + '_all_set.json', 'w') as ariston_fetched:
+                        json.dump(self._set_param, ariston_fetched)
 
             else:
                 # api is down
@@ -1631,6 +1633,13 @@ class AristonChecker():
                         self._set_param = {}
                         for request_item in self._set_param_group:
                             self._set_param_group[request_item] = False
+                        
+                        if self._store_file:
+                            with open('/config/data_' + self._name + '_all_set_get.json', 'w') as ariston_fetched:
+                                json.dump(self._set_param_group, ariston_fetched)
+                            with open('/config/data_' + self._name + '_all_set.json', 'w') as ariston_fetched:
+                                json.dump(self._set_param, ariston_fetched)
+
                         _LOGGER.warning("%s No stable connection to set the data", self)
                         raise CommError
 
