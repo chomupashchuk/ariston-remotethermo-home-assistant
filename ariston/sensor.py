@@ -130,7 +130,7 @@ MODE_TO_ICON = {
 }
 
 """SENSOR_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-SENSOR_SCAN_INTERVAL_SECS = 5
+SENSOR_SCAN_INTERVAL_SECS = 2
 
 SCAN_INTERVAL = timedelta(seconds=SENSOR_SCAN_INTERVAL_SECS)
 

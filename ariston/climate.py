@@ -61,7 +61,7 @@ MODE_TO_ICON = {
 }
 
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
-STATE_SCAN_INTERVAL_SECS = 10
+STATE_SCAN_INTERVAL_SECS = 2
 
 _LOGGER = logging.getLogger(__name__)
 
