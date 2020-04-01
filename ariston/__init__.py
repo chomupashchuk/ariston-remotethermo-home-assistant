@@ -1084,6 +1084,100 @@ class AristonChecker():
                     f.write(resp.text)
         _LOGGER.info('%s %s Data was presumably changed', self, request_type)
 
+    def _set_visible_data(self):
+        try:
+            # set visible values as if they have in fact changed
+            for parameter, value in self._set_param.items():
+                try:
+                    if self._valid_requests[_get_request_for_parameter(parameter)]:
+                        if parameter == PARAM_MODE:
+                            self._ariston_data["mode"] = value
+                        elif parameter == PARAM_CH_MODE:
+                            self._ariston_data["zone"]["mode"]["value"] = value
+                        elif parameter == PARAM_CH_SET_TEMPERATURE:
+                            self._ariston_data["zone"]["comfortTemp"]["value"] = value
+                        elif parameter == PARAM_CH_COMFORT_TEMPERATURE:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_CH_COMFORT_TEMP:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_CH_ECONOMY_TEMPERATURE:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_CH_ECONOMY_TEMP:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_DHW_SET_TEMPERATURE:
+                            self._ariston_data["dhwTemp"]["value"] = value
+                        elif parameter == PARAM_DHW_COMFORT_TEMPERATURE:
+                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = value
+                            try:
+                                if VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_PROGRAM:
+                                    if self._ariston_data_actual["dhwTimeProgComfortActive"] == True:
+                                        # economy temperature is being used
+                                        self._ariston_data["dhwTemp"]["value"] = value
+                                elif VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_UNSUPPORTED:
+                                    self._ariston_data["dhwTemp"]["value"] = value
+                            except:
+                                pass
+                        elif parameter == PARAM_DHW_ECONOMY_TEMPERATURE:
+                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = value
+                            try:
+                                if VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_PROGRAM:
+                                    if self._ariston_data_actual["dhwTimeProgComfortActive"] == False:
+                                        # comfort temperature is being used
+                                        self._ariston_data["dhwTemp"]["value"] = value
+                            except:
+                                pass
+                        elif parameter == PARAM_DHW_MODE:
+                            self._ariston_data["dhwMode"] = value
+                        elif parameter == PARAM_DHW_COMFORT_FUNCTION:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_DHW_COMFORT_FUNCTION:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_INTERNET_TIME:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_INTERNET_TIME:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_INTERNET_WEATHER:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_INTERNET_WEATHER:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_CH_AUTO_FUNCTION:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_CH_AUTO_FUNCTION:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_UNITS:
+                            self._ariston_units["measurementSystem"] = value
+                        elif parameter == PARAM_THERMAL_CLEANSE_CYCLE:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_THERMAL_CLEANSE_CYCLE:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                        elif parameter == PARAM_THERMAL_CLEANSE_FUNCTION:
+                            for iteration, item in enumerate(self._ariston_other_data):
+                                if item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
+                                    self._ariston_other_data[iteration]["value"] = value
+                                    break
+                except:
+                    continue
+        except:
+            pass
+
+        try:
+            if self._store_file:
+                with open('/config/data_' + self._name + '_temp_main.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_data, ariston_fetched)
+                with open('/config/data_' + self._name + '_temp_param.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_other_data, ariston_fetched)
+                with open('/config/data_' + self._name + '_temp_units.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_units, ariston_fetched)
+        except:
+            pass
+
     def _preparing_setting_http_data(self, dummy=None):
         """Preparing and setting http data"""
         self._login_session()
@@ -1606,99 +1700,15 @@ class AristonChecker():
                         changed_parameter[key] = {}
 
                 try:
-                    # set visible values as if they have in fact changed
                     for parameter, value in self._set_param.items():
-                        if _get_request_for_parameter(parameter) in changed_parameter[
+                        if _get_request_for_parameter(parameter) not in changed_parameter[
                             _set_request_for_parameter(parameter)]:
-                            # parameter is being changed
-                            try:
-                                if parameter == PARAM_MODE:
-                                    self._ariston_data["mode"] = value
-                                elif parameter == PARAM_CH_MODE:
-                                    self._ariston_data["zone"]["mode"]["value"] = value
-                                elif parameter == PARAM_CH_SET_TEMPERATURE:
-                                    self._ariston_data["zone"]["comfortTemp"]["value"] = value
-                                elif parameter == PARAM_CH_COMFORT_TEMPERATURE:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_CH_COMFORT_TEMP:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_CH_ECONOMY_TEMPERATURE:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_CH_ECONOMY_TEMP:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_DHW_SET_TEMPERATURE:
-                                    self._ariston_data["dhwTemp"]["value"] = value
-                                elif parameter == PARAM_DHW_COMFORT_TEMPERATURE:
-                                    self._ariston_data["dhwTimeProgComfortTemp"]["value"] = value
-                                    try:
-                                        if VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_PROGRAM:
-                                            if self._ariston_data_actual["dhwTimeProgComfortActive"] == True:
-                                                # economy temperature is being used
-                                                self._ariston_data["dhwTemp"]["value"] = value
-                                        elif VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_UNSUPPORTED:
-                                            self._ariston_data["dhwTemp"]["value"] = value
-                                    except:
-                                        pass
-                                elif parameter == PARAM_DHW_ECONOMY_TEMPERATURE:
-                                    self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = value
-                                    try:
-                                        if VALUE_TO_DHW_MODE[self._ariston_data_actual["dhwMode"]] == VAL_PROGRAM:
-                                            if self._ariston_data_actual["dhwTimeProgComfortActive"] == False:
-                                                # comfort temperature is being used
-                                                self._ariston_data["dhwTemp"]["value"] = value
-                                    except:
-                                        pass
-                                elif parameter == PARAM_DHW_MODE:
-                                    self._ariston_data["dhwMode"] = value
-                                elif parameter == PARAM_DHW_COMFORT_FUNCTION:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_DHW_COMFORT_FUNCTION:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_INTERNET_TIME:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_INTERNET_TIME:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_INTERNET_WEATHER:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_INTERNET_WEATHER:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_CH_AUTO_FUNCTION:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_CH_AUTO_FUNCTION:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_UNITS:
-                                    self._ariston_units["measurementSystem"] = value
-                                elif parameter == PARAM_THERMAL_CLEANSE_CYCLE:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_THERMAL_CLEANSE_CYCLE:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                                elif parameter == PARAM_THERMAL_CLEANSE_FUNCTION:
-                                    for iteration, item in enumerate(self._ariston_other_data):
-                                        if item["id"] == ARISTON_THERMAL_CLEANSE_FUNCTION:
-                                            self._ariston_other_data[iteration]["value"] = value
-                                            break
-                            except:
-                                continue
+                            del self._set_param[parameter]
                 except:
                     pass
 
-                try:
-                    if self._store_file:
-                        with open('/config/data_' + self._name + '_temp_main.json', 'w') as ariston_fetched:
-                            json.dump(self._ariston_data, ariston_fetched)
-                        with open('/config/data_' + self._name + '_temp_param.json', 'w') as ariston_fetched:
-                            json.dump(self._ariston_other_data, ariston_fetched)
-                        with open('/config/data_' + self._name + '_temp_units.json', 'w') as ariston_fetched:
-                            json.dump(self._ariston_units, ariston_fetched)
-                except:
-                    pass
+                # show data as changed in case we were able to read data in between requests
+                self._set_visible_data()
 
                 if changed_parameter[REQUEST_SET_MAIN] != {}:
                     try:
@@ -2046,6 +2056,9 @@ class AristonChecker():
                         _LOGGER.warning('%s Unknown or unsupported units of measurement or key error: %s', self,
                                         wanted_units)
                         pass
+
+                # show data as changed
+                self._set_visible_data()
 
                 self._set_new_data_pending = True
                 # set after short delay to not affect switch or climate or water_heater
