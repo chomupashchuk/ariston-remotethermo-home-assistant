@@ -1,7 +1,4 @@
 """Suppoort for Ariston."""
-import aiohttp
-import async_timeout
-import asyncio
 import copy
 import json
 import logging
@@ -28,7 +25,7 @@ from homeassistant.const import (
 )
 from homeassistant.helpers import discovery
 from homeassistant.helpers.dispatcher import dispatcher_send
-from homeassistant.helpers.event import async_track_point_in_time
+from homeassistant.helpers.event import track_point_in_time
 from homeassistant.util import dt as dt_util
 
 from .binary_sensor import BINARY_SENSORS
@@ -137,7 +134,7 @@ MAX_ZERO_TOLERANCE = 10
 HTTP_DELAY_MULTIPLY = 3
 HTTP_TIMER_SET_LOCK = 25
 HTTP_TIMER_SET_WAIT = 30
-HTTP_TIMEOUT_LOGIN = 9.0
+HTTP_TIMEOUT_LOGIN = 5.0
 HTTP_TIMEOUT_GET_LONG = 16.0
 HTTP_TIMEOUT_GET_MEDIUM = 10.0
 HTTP_TIMEOUT_GET_SHORT = 6.0
@@ -331,7 +328,7 @@ class AristonChecker():
         self._password = password
         self._plant_id = ""
         self._plant_id_lock = threading.Lock()
-        self._session = aiohttp.ClientSession()
+        self._session = requests.Session()
         self._set_param = {}
         self._set_param_group = {
             REQUEST_GET_MAIN: False,
@@ -432,46 +429,46 @@ class AristonChecker():
         """Return if Aristons's API is responding."""
         return self._errors <= MAX_ERRORS and self._login and self._plant_id != ""
 
-    async def _login_session(self):
+    def _login_session(self):
         """Login to fetch Ariston Plant ID and confirm login"""
         if not self._login:
             url = self._url + '/Account/Login'
             login_data = {"Email": self._user, "Password": self._password}
             try:
                 with self._token_lock:
-                    self._token = aiohttp.BasicAuth(self._user, self._password)
-                with async_timeout.timeout(HTTP_TIMEOUT_LOGIN):
-                    resp = await self._session.post(url, auth=self._token, json=login_data)
-                    resp_url = str(resp.url)
-            except asyncio.TimeoutError:
-                _LOGGER.warning('%s Authentication timeout error', self)
-                raise CommError
+                    self._token = requests.auth.HTTPDigestAuth(self._user, self._password)
+                resp = self._session.post(
+                    url,
+                    auth=self._token,
+                    timeout=HTTP_TIMEOUT_LOGIN,
+                    json=login_data,
+                    verify=True)
             except:
                 _LOGGER.warning('%s Authentication login error', self)
                 raise LoginError
-            if resp.status != 200:
-                _LOGGER.warning('%s Unexpected reply during login: %s', self, resp.status)
+            if resp.status_code != 200:
+                _LOGGER.warning('%s Unexpected reply during login: %s', self, resp.status_code)
                 raise CommError
-            if resp_url.startswith(self._url + "/PlantDashboard/Index/") or resp_url.startswith(
-                    self._url + "/PlantManagement/Index/") or resp_url.startswith(
-                self._url + "/PlantPreference/Index/") or resp_url.startswith(
-                self._url + "/Error/Active/") or resp_url.startswith(
-                self._url + "/PlantGuest/Index/") or resp_url.startswith(
+            if resp.url.startswith(self._url + "/PlantDashboard/Index/") or resp.url.startswith(
+                    self._url + "/PlantManagement/Index/") or resp.url.startswith(
+                self._url + "/PlantPreference/Index/") or resp.url.startswith(
+                self._url + "/Error/Active/") or resp.url.startswith(
+                self._url + "/PlantGuest/Index/") or resp.url.startswith(
                 self._url + "/TimeProg/Index/"):
                 with self._plant_id_lock:
-                    self._plant_id = resp_url.split("/")[5]
+                    self._plant_id = resp.url.split("/")[5]
                     self._login = True
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
-            elif resp_url.startswith(self._url + "/PlantData/Index/") or resp_url.startswith(
+            elif resp.url.startswith(self._url + "/PlantData/Index/") or resp.url.startswith(
                     self._url + "/UserData/Index/"):
                 with self._plant_id_lock:
-                    plant_id_attribute = resp_url.split("/")[5]
+                    plant_id_attribute = resp.url.split("/")[5]
                     self._plant_id = plant_id_attribute.split("?")[0]
                     self._login = True
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
-            elif resp_url.startswith(self._url + "/Menu/User/Index/"):
+            elif resp.url.startswith(self._url + "/Menu/User/Index/"):
                 with self._plant_id_lock:
-                    self._plant_id = resp_url.split("/")[6]
+                    self._plant_id = resp.url.split("/")[6]
                     self._login = True
                     _LOGGER.info('%s Plant ID is %s', self, self._plant_id)
             else:
@@ -480,12 +477,12 @@ class AristonChecker():
             dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
         return
 
-    def _store_data(self, resp, resp_json, request_type=""):
+    def _store_data(self, resp, request_type=""):
         """Store received dictionary"""
-        if resp.status != 200:
-            _LOGGER.warning('%s %s invalid reply code %s', self, request_type, resp.status)
+        if resp.status_code != 200:
+            _LOGGER.warning('%s %s invalid reply code %s', self, request_type, resp.status_code)
             raise CommError
-        if not _json_validator(resp_json):
+        if not _json_validator(resp.json()):
             _LOGGER.warning('%s %s No json detected', self, request_type)
             raise CommError
         store_none_zero = False
@@ -530,7 +527,7 @@ class AristonChecker():
                 last_temp_max[PARAM_CH_SET_TEMPERATURE] = UNKNOWN_TEMP
                 pass
             try:
-                self._ariston_data = copy.deepcopy(resp_json)
+                self._ariston_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_data = {}
                 _LOGGER.warning("%s Invalid data received for Main, not JSON", self)
@@ -635,7 +632,7 @@ class AristonChecker():
                 last_temp_max[PARAM_CH_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
                 pass
             try:
-                self._ariston_ch_data = copy.deepcopy(resp_json)
+                self._ariston_ch_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_ch_data = {}
                 _LOGGER.warning("%s Invalid data received for CH, not JSON", self)
@@ -666,7 +663,7 @@ class AristonChecker():
         elif request_type == REQUEST_GET_ERROR:
 
             try:
-                self._ariston_error_data = copy.deepcopy(resp_json)
+                self._ariston_error_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_error_data = {}
                 _LOGGER.warning("%s Invalid data received for error, not JSON", self)
@@ -675,7 +672,7 @@ class AristonChecker():
         elif request_type == REQUEST_GET_GAS:
 
             try:
-                self._ariston_gas_data = copy.deepcopy(resp_json)
+                self._ariston_gas_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_gas_data = {}
                 _LOGGER.warning("%s Invalid data received for energy use, not JSON", self)
@@ -708,7 +705,7 @@ class AristonChecker():
                 last_temp_max[PARAM_CH_ECONOMY_TEMPERATURE] = UNKNOWN_TEMP
                 pass
             try:
-                self._ariston_other_data = copy.deepcopy(resp_json)
+                self._ariston_other_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_other_data = {}
                 _LOGGER.warning("%s Invalid data received for parameters, not JSON", self)
@@ -752,7 +749,7 @@ class AristonChecker():
 
         elif request_type == REQUEST_GET_UNITS:
             try:
-                self._ariston_units = copy.deepcopy(resp_json)
+                self._ariston_units = copy.deepcopy(resp.json())
             except:
                 self._ariston_units = {}
                 _LOGGER.warning("%s Invalid data received for units, not JSON", self)
@@ -760,7 +757,7 @@ class AristonChecker():
 
         elif request_type == REQUEST_GET_CURRENCY:
             try:
-                self._ariston_currency = copy.deepcopy(resp_json)
+                self._ariston_currency = copy.deepcopy(resp.json())
             except:
                 self._ariston_currency = {}
                 _LOGGER.warning("%s Invalid data received for currency, not JSON", self)
@@ -768,7 +765,7 @@ class AristonChecker():
 
         elif request_type == REQUEST_GET_DHW:
             try:
-                self._ariston_dhw_data = copy.deepcopy(resp_json)
+                self._ariston_dhw_data = copy.deepcopy(resp.json())
             except:
                 self._ariston_dhw_data = {}
                 _LOGGER.warning("%s Invalid data received for DHW, not JSON", self)
@@ -776,7 +773,7 @@ class AristonChecker():
 
         elif request_type == REQUEST_GET_VERSION:
             try:
-                self._version = resp_json["tag_name"]
+                self._version = resp.json()["tag_name"]
             except:
                 self._version = ""
                 _LOGGER.warning("%s Invalid version fetched", self)
@@ -812,9 +809,9 @@ class AristonChecker():
                 with open('/config/data_' + self._name + request_type + '_non_zero.json', 'w') as ariston_fetched:
                     json.dump([last_temp, last_temp_min, last_temp_max], ariston_fetched)
 
-    async def _get_http_data(self, request_type=""):
+    def _get_http_data(self, request_type=""):
         """Common fetching of http data"""
-        await self._login_session()
+        self._login_session()
         if self._login and self._plant_id != "":
             try:
                 last_set_of_data = _set_time_start[max(_set_time_start.keys(), key=(lambda k: _set_time_start[k]))]
@@ -824,17 +821,17 @@ class AristonChecker():
             if time.time() - last_set_of_data > HTTP_TIMER_SET_LOCK:
                 # do not read immediately during set attempt
                 if request_type == REQUEST_GET_CH:
-                    url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
+                    url = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=ChZn1&umsys=si'
                     http_timeout = self._timeout_medium
                 elif request_type == REQUEST_GET_DHW:
-                    url_get = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=Dhw&umsys=si'
+                    url = self._url + '/TimeProg/GetWeeklyPlan/' + self._plant_id + '?progId=Dhw&umsys=si'
                     http_timeout = self._timeout_medium
                 elif request_type == REQUEST_GET_ERROR:
-                    url_get = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
+                    url = self._url + '/Error/ActiveDataSource/' + self._plant_id + \
                               '?$inlinecount=allpages&$skip=0&$top=100'
                     http_timeout = self._timeout_medium
                 elif request_type == REQUEST_GET_GAS:
-                    url_get = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
+                    url = self._url + '/Metering/GetData/' + self._plant_id + '?kind=1&umsys=si'
                     http_timeout = self._timeout_medium
                 elif request_type == REQUEST_GET_OTHER:
                     list_to_send = ARISTON_PARAM_LIST.copy()
@@ -845,34 +842,33 @@ class AristonChecker():
                     except:
                         pass
                     ids_to_fetch = ",".join(map(str, list_to_send))
-                    url_get = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
+                    url = self._url + '/Menu/User/Refresh/' + self._plant_id + '?paramIds=' + ids_to_fetch + \
                               '&umsys=si'
                     http_timeout = self._timeout_long
                 elif request_type == REQUEST_GET_UNITS:
-                    url_get = self._url + '/PlantPreference/GetData/' + self._plant_id
+                    url = self._url + '/PlantPreference/GetData/' + self._plant_id
                     http_timeout = self._timeout_short
                 elif request_type == REQUEST_GET_CURRENCY:
-                    url_get = self._url + '/Metering/GetCurrencySettings/' + self._plant_id
+                    url = self._url + '/Metering/GetCurrencySettings/' + self._plant_id
                     http_timeout = self._timeout_medium
                 elif request_type == REQUEST_GET_VERSION:
-                    url_get = GITHUB_LATEST_RELEASE
+                    url = GITHUB_LATEST_RELEASE
                     http_timeout = self._timeout_short
                 else:
-                    url_get = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
+                    url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
                     http_timeout = self._timeout_long
                 with self._data_lock:
                     try:
                         self._get_time_start[request_type] = time.time()
-                        with async_timeout.timeout(http_timeout):
-                            resp = await self._session.get(url_get, auth=self._token)
-                            resp_json = await resp.json()
-                    except asyncio.TimeoutError:
-                        _LOGGER.warning('%s Timeout error for %s', self, request_type)
-                        raise CommError
+                        resp = self._session.get(
+                            url,
+                            auth=self._token,
+                            timeout=http_timeout,
+                            verify=True)
                     except:
                         _LOGGER.warning("%s %s Problem reading data", self, request_type)
                         raise CommError
-                    self._store_data(resp, resp_json, request_type)
+                    self._store_data(resp, request_type)
             else:
                 _LOGGER.debug("%s %s Still setting data, read restricted", self, request_type)
         else:
@@ -881,7 +877,7 @@ class AristonChecker():
         _LOGGER.info('Data fetched')
         return True
 
-    async def _queue_get_data(self, dummy=None):
+    def _queue_get_data(self, dummy=None):
         """Queue all request items"""
         with self._data_lock:
             # schedule next get request
@@ -895,22 +891,22 @@ class AristonChecker():
                 retry_in = self._timer_between_param_delay
                 self._timer_between_set = VAL_NORMAL
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
-            async_track_point_in_time(self._hass, self._queue_get_data, dt_util.now() + timedelta(seconds=retry_in))
+            track_point_in_time(self._hass, self._queue_get_data, dt_util.now() + timedelta(seconds=retry_in))
 
             # first trigger fetching parameters that are being changed
             if self._set_param_group[REQUEST_GET_MAIN]:
                 # setting of main data is ongoing, prioritize it
-                async_track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=2))
+                track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=2))
                 if not self._set_scheduled:
                     self._set_param_group[REQUEST_GET_MAIN] = False
             elif self._set_param_group[REQUEST_GET_OTHER]:
                 # setting of parameter data is ongoing, prioritize it
-                async_track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=2))
+                track_point_in_time(self._hass, self._get_other_data, dt_util.now() + timedelta(seconds=2))
                 if not self._set_scheduled:
                     self._set_param_group[REQUEST_GET_OTHER] = False
             elif self._set_param_group[REQUEST_GET_UNITS]:
                 # setting of parameter units is ongoing, prioritize it
-                async_track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=2))
+                track_point_in_time(self._hass, self._get_unit_data, dt_util.now() + timedelta(seconds=2))
                 if not self._set_scheduled:
                     self._set_param_group[REQUEST_GET_UNITS] = False
             else:
@@ -918,7 +914,7 @@ class AristonChecker():
                 # select next item from high priority list
                 if self._get_request_number_high_prio < len(self._request_list_high_prio):
                     # item is available in the list
-                    async_track_point_in_time(self._hass,
+                    track_point_in_time(self._hass,
                                               self._request_list_high_prio[self._get_request_number_high_prio],
                                               dt_util.now() + timedelta(seconds=2))
                     self._get_request_number_high_prio += 1
@@ -933,7 +929,7 @@ class AristonChecker():
                         # other data is not that important, so just handle in queue
                         if self._get_request_number_low_prio < len(self._request_list_low_prio):
                             # item is available in the list
-                            async_track_point_in_time(self._hass,
+                            track_point_in_time(self._hass,
                                                       self._request_list_low_prio[self._get_request_number_low_prio],
                                                       dt_util.now() + timedelta(seconds=2))
                             self._get_request_number_low_prio += 1
@@ -944,10 +940,10 @@ class AristonChecker():
                 with open('/config/data_' + self._name + '_all_set_get.json', 'w') as ariston_fetched:
                     json.dump(self._set_param_group, ariston_fetched)
 
-    async def _control_availability_state(self, request_type):
+    def _control_availability_state(self, request_type):
         """Control component availability"""
         try:
-            await self._get_http_data(request_type)
+            self._get_http_data(request_type)
         except:
             with self._lock:
                 was_online = self.available
@@ -968,43 +964,43 @@ class AristonChecker():
             dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
         return
 
-    async def _get_main_data(self, dummy=None):
+    def _get_main_data(self, dummy=None):
         """Get Ariston main data from http"""
-        await self._control_availability_state(REQUEST_GET_MAIN)
+        self._control_availability_state(REQUEST_GET_MAIN)
 
-    async def _get_gas_water_data(self, dummy=None):
+    def _get_gas_water_data(self, dummy=None):
         """Get Ariston gas and water use data from http"""
-        await self._control_availability_state(REQUEST_GET_GAS)
+        self._control_availability_state(REQUEST_GET_GAS)
 
-    async def _get_error_data(self, dummy=None):
+    def _get_error_data(self, dummy=None):
         """Get Ariston error data from http"""
-        await self._control_availability_state(REQUEST_GET_ERROR)
+        self._control_availability_state(REQUEST_GET_ERROR)
 
-    async def _get_ch_data(self, dummy=None):
+    def _get_ch_data(self, dummy=None):
         """Get Ariston CH data from http"""
-        await self._control_availability_state(REQUEST_GET_CH)
+        self._control_availability_state(REQUEST_GET_CH)
 
-    async def _get_dhw_data(self, dummy=None):
+    def _get_dhw_data(self, dummy=None):
         """Get Ariston DHW data from http"""
-        await self._control_availability_state(REQUEST_GET_DHW)
+        self._control_availability_state(REQUEST_GET_DHW)
 
-    async def _get_other_data(self, dummy=None):
+    def _get_other_data(self, dummy=None):
         """Get Ariston other data from http"""
-        await self._control_availability_state(REQUEST_GET_OTHER)
+        self._control_availability_state(REQUEST_GET_OTHER)
 
-    async def _get_unit_data(self, dummy=None):
+    def _get_unit_data(self, dummy=None):
         """Get Ariston unit data from http"""
-        await self._control_availability_state(REQUEST_GET_UNITS)
+        self._control_availability_state(REQUEST_GET_UNITS)
 
-    async def _get_currency_data(self, dummy=None):
+    def _get_currency_data(self, dummy=None):
         """Get Ariston currency data from http"""
-        await self._control_availability_state(REQUEST_GET_CURRENCY)
+        self._control_availability_state(REQUEST_GET_CURRENCY)
 
-    async def _get_version_data(self, dummy=None):
+    def _get_version_data(self, dummy=None):
         """Get Ariston version from GitHub"""
-        await self._control_availability_state(REQUEST_GET_VERSION)
+        self._control_availability_state(REQUEST_GET_VERSION)
 
-    async def _setting_http_data(self, set_data, request_type=""):
+    def _setting_http_data(self, set_data, request_type=""):
         """setting of data"""
         _LOGGER.info('setting http data')
         try:
@@ -1029,31 +1025,29 @@ class AristonChecker():
             http_timeout = self._timeout_long
         try:
             self._set_time_start[request_type] = time.time()
-            with async_timeout.timeout(http_timeout):
-                resp = await self._session.post(url, auth=self._token, json=set_data)
-                resp_json = await resp.json()
-            if resp.status != 200:
-                _LOGGER.warning("%s %s Command to set data failed with code: %s", self, request_type, resp.status)
-                raise CommError
-            resp.raise_for_status()
-            self._set_time_end[request_type] = time.time()
-            try:
-                if request_type == REQUEST_SET_MAIN:
-                    self._store_data(resp, resp_json, request_type)
-                    if self._store_file:
-                        with open("/config/data_" + self._name + request_type + "_reply.txt", "w") as f:
-                            text = await resp.text()
-                            f.write(text)
-            except:
-                pass
+            resp = self._session.post(
+                url,
+                auth=self._token,
+                timeout=http_timeout,
+                json=set_data,
+                verify=True)
         except:
             _LOGGER.warning('%s %s error', self, request_type)
             raise CommError
+        if resp.status_code != 200:
+            _LOGGER.warning("%s %s Command to set data failed with code: %s", self, request_type, resp.status_code)
+            raise CommError
+        self._set_time_end[request_type] = time.time()
+        if request_type == REQUEST_SET_MAIN:
+            self._store_data(resp, request_type)
+            if self._store_file:
+                with open("/config/data_" + self._name + request_type + "_reply.txt", "w") as f:
+                    f.write(resp.text)
         _LOGGER.info('%s %s Data was presumably changed', self, request_type)
 
-    async def _preparing_setting_http_data(self, dummy=None):
+    def _preparing_setting_http_data(self, dummy=None):
         """Preparing and setting http data"""
-        await self._login_session()
+        self._login_session()
         with self._data_lock:
             if not self._set_new_data_pending:
                 # initiated from schedule, no longer scheduled
@@ -1562,7 +1556,7 @@ class AristonChecker():
                             else:
                                 retry_in = timedelta(
                                     seconds=self._timer_between_param_delay * HTTP_DELAY_MULTIPLY + HTTP_TIMER_SET_WAIT)
-                            async_track_point_in_time(self._hass, self._preparing_setting_http_data,
+                            track_point_in_time(self._hass, self._preparing_setting_http_data,
                                                       dt_util.now() + retry_in)
                             self._set_retry[key] += 1
                             self._set_scheduled = True
@@ -1574,7 +1568,7 @@ class AristonChecker():
 
                 if changed_parameter[REQUEST_SET_MAIN] != {}:
                     try:
-                        await self._setting_http_data(set_data, REQUEST_SET_MAIN)
+                        self._setting_http_data(set_data, REQUEST_SET_MAIN)
                     except:
                         pass
 
@@ -1582,7 +1576,7 @@ class AristonChecker():
 
                     try:
                         if set_param_data != []:
-                            await self._setting_http_data(set_param_data, REQUEST_SET_OTHER)
+                            self._setting_http_data(set_param_data, REQUEST_SET_OTHER)
                         else:
                             _LOGGER.warning('%s No valid data to set parameters', self)
                             raise CommError(error)
@@ -1591,7 +1585,7 @@ class AristonChecker():
 
                 elif changed_parameter[REQUEST_SET_UNITS] != {}:
                     try:
-                        await self._setting_http_data(set_units_data, REQUEST_SET_UNITS)
+                        self._setting_http_data(set_units_data, REQUEST_SET_UNITS)
                     except:
                         pass
 
@@ -1624,7 +1618,7 @@ class AristonChecker():
                         else:
                             retry_in = timedelta(
                                 seconds=self._timer_between_param_delay * HTTP_DELAY_MULTIPLY + HTTP_TIMER_SET_WAIT)
-                        async_track_point_in_time(self._hass, self._preparing_setting_http_data,
+                        track_point_in_time(self._hass, self._preparing_setting_http_data,
                                                   dt_util.now() + retry_in)
                         self._set_retry[REQUEST_SET_MAIN] += 1
                         self._set_scheduled = True
@@ -1633,7 +1627,7 @@ class AristonChecker():
                         self._set_param = {}
                         for request_item in self._set_param_group:
                             self._set_param_group[request_item] = False
-                        
+
                         if self._store_file:
                             with open('/config/data_' + self._name + '_all_set_get.json', 'w') as ariston_fetched:
                                 json.dump(self._set_param_group, ariston_fetched)
@@ -1922,14 +1916,14 @@ class AristonChecker():
                 self._set_new_data_pending = True
                 # set after short delay to not affect switch or climate or water_heater
                 retry_time = dt_util.now() + timedelta(seconds=2)
-                async_track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
+                track_point_in_time(self._hass, self._preparing_setting_http_data, retry_time)
 
         else:
             _LOGGER.warning("%s No valid data fetched from server to set changes", self)
             raise CommError
 
 
-async def async_setup(hass, config):
+def setup(hass, config):
     """Set up the Ariston component."""
     hass.data.setdefault(DATA_ARISTON, {DEVICES: {}, CLIMATES: [], WATER_HEATERS: []})
     api_list = []
@@ -1952,7 +1946,7 @@ async def async_setup(hass, config):
             api_list.append(api)
             api_valid = True
             # start api execution by logging in
-            await api._login_session()
+            api._login_session()
         except LoginError as ex:
             _LOGGER.error("Login error for %s: %s", name, ex)
             pass
@@ -1964,7 +1958,7 @@ async def async_setup(hass, config):
             pass
         if api_valid:
             # proceed with data fetching
-            async_track_point_in_time(api._hass, api._queue_get_data, dt_util.now() + timedelta(seconds=2))
+            track_point_in_time(api._hass, api._queue_get_data, dt_util.now() + timedelta(seconds=2))
         # load all devices
         hass.data[DATA_ARISTON][DEVICES][name] = AristonDevice(api)
         discovery.load_platform(
@@ -2002,7 +1996,7 @@ async def async_setup(hass, config):
                 config
             )
 
-    async def set_ariston_data(call):
+    def set_ariston_data(call):
         """Handle the service call to set the data."""
         entity_id = call.data.get(ATTR_ENTITY_ID, "")
         try:
@@ -2100,7 +2094,7 @@ async def async_setup(hass, config):
         raise AristonError
         return
 
-    hass.services.async_register(DOMAIN, SERVICE_SET_DATA, set_ariston_data)
+    hass.services.register(DOMAIN, SERVICE_SET_DATA, set_ariston_data)
 
     if not hass.data[DATA_ARISTON][DEVICES]:
         return False
