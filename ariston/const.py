@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.3"
+VERSION = "1.3.4"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
@@ -303,6 +303,7 @@ CONF_HVAC_OFF_PRESENT = "hvac_off_present"
 CONF_LOCALIZATION = "localization"
 CONF_UNITS = "units"
 CONF_POLLING_RATE = "polling_rate"
+CONF_INIT_AT_START = "init_during_start"
 
 MODE_TO_VALUE = {VAL_WINTER: 1, VAL_SUMMER: 0, VAL_OFF: 5, VAL_HEATING_ONLY: 2}
 VALUE_TO_MODE = {1: VAL_WINTER, 0: VAL_SUMMER, 5: VAL_OFF, 2: VAL_HEATING_ONLY}

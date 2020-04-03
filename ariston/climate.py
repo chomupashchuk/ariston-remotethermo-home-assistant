@@ -275,7 +275,7 @@ class AristonThermostat(ClimateDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        return self._api.available
+        return self._api.available and self._api._ariston_data != {}
 
     @property
     def target_temperature_step(self):

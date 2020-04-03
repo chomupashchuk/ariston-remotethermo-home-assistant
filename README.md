@@ -57,6 +57,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `control_from_water_heater` - if `water_heater` entity will have controling parameters like `summer` or `winter` or `off` as part of operations. Default value is `false`.
   - `units` - which uniots to be used. Values are: `metric` (°C-bar-kW...), `imperial` (°F-psi-kBtu/h...), `auto` (detect automatically, which takes additional time). Default is `metric`.
   - `polling_rate` - indicates timers to be used to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies and longer delays between the requests, which might be beneficial in case of slow Ariston responces due to internet connection for example. Default is `normal` to have faster responces.
+  - `init_during_start` - indicates if integration data shall be fetched during Home Assistant start to have valid data when Home Assistant is started (no guarantee that it will succeeed). Value `true` delays the start time for longer and `false` for lesser period of time but initially all entities will be unavailable until data is fetched. Default value is `true`
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).

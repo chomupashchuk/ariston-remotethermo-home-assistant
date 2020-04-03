@@ -52,6 +52,7 @@ from .const import (
     CONF_LOCALIZATION,
     CONF_UNITS,
     CONF_POLLING_RATE,
+    CONF_INIT_AT_START,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -179,6 +180,7 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_LOCALIZATION, default=LANG_EN): vol.In(LANG_LIST),
         vol.Optional(CONF_UNITS, default=VAL_METRIC): vol.In([VAL_METRIC, VAL_IMPERIAL, VAL_AUTO]),
         vol.Optional(CONF_POLLING_RATE, default=VAL_NORMAL): vol.In([VAL_NORMAL, VAL_LONG]),
+        vol.Optional(CONF_INIT_AT_START, default=True): cv.boolean,
     }
 )
 
@@ -440,7 +442,7 @@ class AristonChecker():
     @property
     def available(self):
         """Return if Aristons's API is responding."""
-        return self._errors <= MAX_ERRORS and self._login and self._plant_id != ""
+        return self._errors <= MAX_ERRORS and self._login and self._plant_id != "" and self._ariston_data_actual != {}
 
     def _login_session(self):
         """Login to fetch Ariston Plant ID and confirm login"""
@@ -548,7 +550,7 @@ class AristonChecker():
             except:
                 self._ariston_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for Main, not JSON", self)
-                pass
+                raise CommError
             try:
                 # force default modes if received none
                 if self._ariston_data_actual["allowedModes"] == []:
@@ -629,7 +631,7 @@ class AristonChecker():
                 self._ariston_data_actual["allowedModes"] = DEFAULT_MODES
                 self._ariston_data_actual["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
                 _LOGGER.warning("%s Invalid data received for Main", self)
-                pass
+                raise CommError
 
             self._ariston_data = copy.deepcopy(self._ariston_data_actual)
 
@@ -655,7 +657,7 @@ class AristonChecker():
             except:
                 self._ariston_ch_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for CH, not JSON", self)
-                pass
+                raise CommError
             try:
                 # keep latest CH comfort temperature if received invalid
                 if self._ariston_ch_data_actual["comfortTemp"]["value"] == UNKNOWN_TEMP:
@@ -679,7 +681,7 @@ class AristonChecker():
                         self._get_zero_temperature[PARAM_CH_ECONOMY_TEMPERATURE] = 0
             except:
                 _LOGGER.warning("%s Invalid data received for CH", self)
-                pass
+                raise CommError
 
             self._ariston_ch_data = copy.deepcopy(self._ariston_ch_data_actual)
 
@@ -690,7 +692,7 @@ class AristonChecker():
             except:
                 self._ariston_error_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for error, not JSON", self)
-                pass
+                raise CommError
 
             self._ariston_error_data = copy.deepcopy(self._ariston_error_data_actual)
 
@@ -701,7 +703,7 @@ class AristonChecker():
             except:
                 self._ariston_gas_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for energy use, not JSON", self)
-                pass
+                raise CommError
 
             self._ariston_gas_data = copy.deepcopy(self._ariston_gas_data_actual)
 
@@ -736,7 +738,7 @@ class AristonChecker():
             except:
                 self._ariston_other_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for parameters, not JSON", self)
-                pass
+                raise CommError
 
             for item, param_item in enumerate(self._ariston_other_data_actual):
                 try:
@@ -782,7 +784,7 @@ class AristonChecker():
             except:
                 self._ariston_units_actual = {}
                 _LOGGER.warning("%s Invalid data received for units, not JSON", self)
-                pass
+                raise CommError
 
             self._ariston_units = copy.deepcopy(self._ariston_units_actual)
 
@@ -792,7 +794,7 @@ class AristonChecker():
             except:
                 self._ariston_currency_actual = {}
                 _LOGGER.warning("%s Invalid data received for currency, not JSON", self)
-                pass
+                raise CommError
 
             self._ariston_currency = copy.deepcopy(self._ariston_currency_actual)
 
@@ -802,7 +804,7 @@ class AristonChecker():
             except:
                 self._ariston_dhw_data_actual = {}
                 _LOGGER.warning("%s Invalid data received for DHW, not JSON", self)
-                pass
+                raise CommError
 
             self._ariston_dhw_data = copy.deepcopy(self._ariston_dhw_data_actual)
 
@@ -815,34 +817,45 @@ class AristonChecker():
 
         self._get_time_end[request_type] = time.time()
 
-        if self._store_file:
-            with open('/config/data_' + self._name + request_type + '.json', 'w') as ariston_fetched:
-                if request_type in [REQUEST_GET_MAIN, REQUEST_SET_MAIN]:
-                    json.dump(self._ariston_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_CH:
-                    json.dump(self._ariston_ch_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_DHW:
-                    json.dump(self._ariston_dhw_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_ERROR:
-                    json.dump(self._ariston_error_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_GAS:
-                    json.dump(self._ariston_gas_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_OTHER:
-                    json.dump(self._ariston_other_data_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_UNITS:
-                    json.dump(self._ariston_units_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_CURRENCY:
-                    json.dump(self._ariston_currency_actual, ariston_fetched)
-                elif request_type == REQUEST_GET_VERSION:
-                    ariston_fetched.write(self._version)
-            with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
-                json.dump(self._get_zero_temperature, ariston_fetched)
-            with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:
-                json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
-                          ariston_fetched)
-            if store_none_zero:
-                with open('/config/data_' + self._name + request_type + '_non_zero.json', 'w') as ariston_fetched:
-                    json.dump([last_temp, last_temp_min, last_temp_max], ariston_fetched)
+        try:
+            if self._store_file:
+                with open('/config/data_' + self._name + request_type + '.json', 'w') as ariston_fetched:
+                    if request_type in [REQUEST_GET_MAIN, REQUEST_SET_MAIN]:
+                        json.dump(self._ariston_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_CH:
+                        json.dump(self._ariston_ch_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_DHW:
+                        json.dump(self._ariston_dhw_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_ERROR:
+                        json.dump(self._ariston_error_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_GAS:
+                        json.dump(self._ariston_gas_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_OTHER:
+                        json.dump(self._ariston_other_data_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_UNITS:
+                        json.dump(self._ariston_units_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_CURRENCY:
+                        json.dump(self._ariston_currency_actual, ariston_fetched)
+                    elif request_type == REQUEST_GET_VERSION:
+                        ariston_fetched.write(self._version)
+                with open('/config/data_' + self._name + '_timers.json', 'w') as ariston_fetched:
+                    json.dump([self._set_time_start, self._set_time_end, self._get_time_start, self._get_time_end],
+                              ariston_fetched)
+                with open('/config/data_' + self._name + '_temp_main.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_data, ariston_fetched)
+                with open('/config/data_' + self._name + '_temp_param.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_other_data, ariston_fetched)
+                with open('/config/data_' + self._name + '_temp_units.json', 'w') as ariston_fetched:
+                    json.dump(self._ariston_units, ariston_fetched)
+                if store_none_zero:
+                    with open('/config/data_' + self._name + request_type + '_last_temp.json', 'w') as ariston_fetched:
+                        json.dump([last_temp, last_temp_min, last_temp_max], ariston_fetched)
+                    with open('/config/data_' + self._name + request_type + '_reply_zero.json', 'w') as ariston_fetched:
+                        json.dump(resp.json(), ariston_fetched)
+                    with open('/config/data_' + self._name + '_zero_count.json', 'w') as ariston_fetched:
+                        json.dump(self._get_zero_temperature, ariston_fetched)
+        except:
+            raise
 
     def _get_http_data(self, request_type=""):
         """Common fetching of http data"""
@@ -891,7 +904,11 @@ class AristonChecker():
                     http_timeout = self._timeout_short
                 else:
                     url = self._url + '/PlantDashboard/GetPlantData/' + self._plant_id
-                    http_timeout = self._timeout_long
+                    if self.available:
+                        http_timeout = self._timeout_long
+                    else:
+                        # for not available give a bit more time
+                        http_timeout = self._timeout_long + 4
                 with self._data_lock:
                     try:
                         self._get_time_start[request_type] = time.time()
@@ -928,8 +945,13 @@ class AristonChecker():
                 _LOGGER.debug('%s Fetching data in %s seconds', self, retry_in)
             track_point_in_time(self._hass, self._queue_get_data, dt_util.now() + timedelta(seconds=retry_in))
 
-            # first trigger fetching parameters that are being changed
-            if self._set_param_group[REQUEST_GET_MAIN]:
+            if not self.available:
+                # first always initiate main data
+                track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=1))
+                # force skip after fetching data
+                self._get_request_number_high_prio = 1
+            # next trigger fetching parameters that are being changed
+            elif self._set_param_group[REQUEST_GET_MAIN]:
                 # setting of main data is ongoing, prioritize it
                 track_point_in_time(self._hass, self._get_main_data, dt_util.now() + timedelta(seconds=1))
                 if not self._set_scheduled:
@@ -945,7 +967,7 @@ class AristonChecker():
                 if not self._set_scheduled:
                     self._set_param_group[REQUEST_GET_UNITS] = False
             else:
-                # second is fetch higher priority list items
+                # last is fetch higher priority list items
                 # select next item from high priority list
                 if self._get_request_number_high_prio < len(self._request_list_high_prio):
                     # item is available in the list
@@ -1769,10 +1791,25 @@ class AristonChecker():
                     else:
                         # no more retries, no need to keep changed data
                         self._set_param = {}
+
+                        try:
+                            # clear temporary set data
+                            self._ariston_data = copy.deepcopy(self._ariston_data_actual)
+                            self._ariston_other_data = copy.deepcopy(self._ariston_other_data_actual)
+                            self._ariston_units = copy.deepcopy(self._ariston_units_actual)
+                        except:
+                            pass
+
                         for request_item in self._set_param_group:
                             self._set_param_group[request_item] = False
 
                         if self._store_file:
+                            with open('/config/data_' + self._name + '_temp_main.json', 'w') as ariston_fetched:
+                                json.dump(self._ariston_data, ariston_fetched)
+                            with open('/config/data_' + self._name + '_temp_param.json', 'w') as ariston_fetched:
+                                json.dump(self._ariston_other_data, ariston_fetched)
+                            with open('/config/data_' + self._name + '_temp_units.json', 'w') as ariston_fetched:
+                                json.dump(self._ariston_units, ariston_fetched)
                             with open('/config/data_' + self._name + '_all_set_get.json', 'w') as ariston_fetched:
                                 json.dump(self._set_param_group, ariston_fetched)
                             with open('/config/data_' + self._name + '_all_set.json', 'w') as ariston_fetched:
@@ -2085,15 +2122,24 @@ def setup(hass, config):
         binary_sensors = device.get(CONF_BINARY_SENSORS)
         sensors = device.get(CONF_SENSORS)
         switches = device.get(CONF_SWITCHES)
-        api_valid = False
+        init_during_start = device[CONF_INIT_AT_START]
         try:
             api = AristonChecker(hass, device=device, name=name, username=username, password=password, retries=retries,
                                  store_file=store_file, units=units, polling=polling, sensors=sensors,
                                  binary_sensors=binary_sensors, switches=switches)
             api_list.append(api)
-            api_valid = True
             # start api execution by logging in
-            api._login_session()
+            if init_during_start:
+                # queue data fetching in next round (between parameters)
+                track_point_in_time(api._hass, api._queue_get_data,
+                                    dt_util.now() + timedelta(seconds=api._timer_between_param_delay))
+                # make full init by fetching whole data set, ignore item 0 from high prio queue as a result
+                api._get_request_number_high_prio = 1
+                api._get_main_data()
+            else:
+                # queue data fetching in 1 second
+                track_point_in_time(api._hass, api._queue_get_data,
+                                    dt_util.now() + timedelta(seconds=1))
         except LoginError as ex:
             _LOGGER.error("Login error for %s: %s", name, ex)
             pass
@@ -2103,9 +2149,7 @@ def setup(hass, config):
         except:
             _LOGGER.error("Unexpected error for %s:", name)
             pass
-        if api_valid:
-            # proceed with data fetching
-            track_point_in_time(api._hass, api._queue_get_data, dt_util.now() + timedelta(seconds=2))
+
         # load all devices
         hass.data[DATA_ARISTON][DEVICES][name] = AristonDevice(api)
         discovery.load_platform(
