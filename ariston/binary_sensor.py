@@ -15,6 +15,7 @@ from .const import (
     ARISTON_INTERNET_WEATHER,
     ARISTON_CH_AUTO_FUNCTION,
     ARISTON_THERMAL_CLEANSE_FUNCTION,
+    CONF_DHW_FLAME_UNKNOWN_ON,
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
@@ -27,6 +28,7 @@ from .const import (
     PARAM_INTERNET_WEATHER,
     PARAM_CH_AUTO_FUNCTION,
     PARAM_CH_FLAME,
+    PARAM_DHW_FLAME,
     PARAM_THERMAL_CLEANSE_FUNCTION,
     PARAM_CH_PILOT,
     PARAM_UPDATE,
@@ -39,6 +41,7 @@ from .const import (
     BINARY_SENSOR_INTERNET_WEATHER,
     BINARY_SENSOR_CH_AUTO_FUNCTION,
     BINARY_SENSOR_CH_FLAME,
+    BINARY_SENSOR_DHW_FLAME,
     BINARY_SENSOR_THERMAL_CLEANSE_FUNCTION,
     BINARY_SENSOR_CH_PILOT,
     BINARY_SENSOR_UPDATE,
@@ -67,6 +70,7 @@ _LOGGER = logging.getLogger(__name__)
 BINARY_SENSORS = {
     PARAM_CH_AUTO_FUNCTION: (BINARY_SENSOR_CH_AUTO_FUNCTION, None, "mdi:radiator"),
     PARAM_CH_FLAME: (BINARY_SENSOR_CH_FLAME, None, "mdi:fire"),
+    PARAM_DHW_FLAME: (BINARY_SENSOR_DHW_FLAME, None, "mdi:fire"),
     PARAM_HOLIDAY_MODE: (BINARY_SENSOR_HOLIDAY_MODE, None, "mdi:island"),
     PARAM_ONLINE: (BINARY_SENSOR_ONLINE, DEVICE_CLASS_CONNECTIVITY, None),
     PARAM_FLAME: (BINARY_SENSOR_FLAME, None, "mdi:fire"),
@@ -251,6 +255,18 @@ class AristonBinarySensor(BinarySensorDevice):
                     self._state = self._api._ariston_data["zone"]["heatRequest"]
                 except:
                     self._state = False
+                    pass
+
+            elif self._sensor_type == PARAM_DHW_FLAME:
+                self._state = False
+                try:
+                    if not self._api._ariston_data["zone"]["heatRequest"] and self._api._ariston_data["flameSensor"]:
+                        self._state = True
+                    elif self._api._ariston_data["flameForDhw"]:
+                        self._state = True
+                    elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
+                        self._state = True
+                except:
                     pass
 
             elif self._sensor_type == PARAM_UPDATE:

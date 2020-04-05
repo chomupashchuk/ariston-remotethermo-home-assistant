@@ -53,6 +53,7 @@ from .const import (
     CONF_UNITS,
     CONF_POLLING_RATE,
     CONF_INIT_AT_START,
+    CONF_DHW_FLAME_UNKNOWN_ON,
     DATA_ARISTON,
     DAYS_OF_WEEK,
     DEVICES,
@@ -181,6 +182,7 @@ ARISTON_SCHEMA = vol.Schema(
         vol.Optional(CONF_UNITS, default=VAL_METRIC): vol.In([VAL_METRIC, VAL_IMPERIAL, VAL_AUTO]),
         vol.Optional(CONF_POLLING_RATE, default=VAL_NORMAL): vol.In([VAL_NORMAL, VAL_LONG]),
         vol.Optional(CONF_INIT_AT_START, default=True): cv.boolean,
+        vol.Optional(CONF_DHW_FLAME_UNKNOWN_ON, default=False): cv.boolean,
     }
 )
 

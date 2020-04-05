@@ -25,6 +25,8 @@ from homeassistant.const import (
 )
 
 from .const import (
+    ARISTON_CH_COMFORT_TEMP,
+    ARISTON_CH_ECONOMY_TEMP,
     CONF_HVAC_OFF,
     CONF_HVAC_OFF_PRESENT,
     CONF_LOCALIZATION,
@@ -34,6 +36,8 @@ from .const import (
     PARAM_CH_MODE,
     PARAM_MODE,
     PARAM_CH_COMFORT_TEMPERATURE,
+    PARAM_CH_ECONOMY_TEMPERATURE,
+    PARAM_CH_SET_TEMPERATURE,
     VAL_WINTER,
     VAL_SUMMER,
     VAL_HEATING_ONLY,
@@ -308,7 +312,21 @@ class AristonThermostat(ClimateDevice):
         """Set new target temperature."""
         new_temperature = kwargs.get(ATTR_TEMPERATURE)
         if new_temperature is not None:
-            self._api.set_http_data({PARAM_CH_COMFORT_TEMPERATURE: new_temperature})
+            try:
+                if VALUE_TO_CH_MODE[self._api._ariston_data["zone"]["mode"]["value"]] == VAL_PROGRAM:
+                    if self._api._ariston_other_data != {}:
+                        for param_item in self._api._ariston_other_data:
+                            if param_item["id"] == ARISTON_CH_COMFORT_TEMP:
+                                if self._api._ariston_data["zone"]["comfortTemp"]["value"] == param_item["value"]:
+                                    self._api.set_http_data({PARAM_CH_COMFORT_TEMPERATURE: new_temperature})
+                                    return
+                            elif param_item["id"] == ARISTON_CH_ECONOMY_TEMP:
+                                if self._api._ariston_data["zone"]["comfortTemp"]["value"] == param_item["value"]:
+                                    self._api.set_http_data({PARAM_CH_ECONOMY_TEMPERATURE: new_temperature})
+                                    return
+            except:
+                pass
+            self._api.set_http_data({PARAM_CH_SET_TEMPERATURE: new_temperature})
 
     def update(self):
         """Update all Node data from Hive."""

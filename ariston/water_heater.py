@@ -21,6 +21,7 @@ from .const import (
     DEVICES,
     CONF_CONTROL_FROM_WATER_HEATER,
     CONF_LOCALIZATION,
+    CONF_DHW_FLAME_UNKNOWN_ON,
     LANG_LOCATION,
     MODE_TO_VALUE,
     PARAM_DHW_MODE,
@@ -51,6 +52,8 @@ from .const import (
 DEFAULT_MIN = 36.0
 DEFAULT_MAX = 60.0
 DEFAULT_TEMP = 0.0
+ACTION_IDLE = "idle"
+ACTION_HEATING = "heating"
 STATE_SCAN_INTERVAL_SECS = 2
 
 SUPPORT_FLAGS_HEATER = (SUPPORT_TARGET_TEMPERATURE | SUPPORT_OPERATION_MODE)
@@ -232,7 +235,17 @@ class AristonWaterHeater(WaterHeaterDevice):
     @property
     def device_state_attributes(self):
         """Return the supported step of target temperature."""
-        data = {"target_temp_step": 1.0}
+        action = ACTION_IDLE
+        try:
+            if not self._api._ariston_data["zone"]["heatRequest"] and self._api._ariston_data["flameSensor"]:
+                action = ACTION_HEATING
+            elif self._api._ariston_data["flameForDhw"]:
+                action = ACTION_HEATING
+            elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
+                action = ACTION_HEATING
+        except:
+            pass
+        data = {"target_temp_step": 1.0, "hvac_action": action}
         return data
 
     @property

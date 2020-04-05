@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.4"
+VERSION = "1.3.5"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
@@ -40,6 +40,7 @@ SENSOR_GAS_COST = "Gas Cost"
 SENSOR_ELECTRICITY_COST = "Electricity Cost"
 
 BINARY_SENSOR_CH_FLAME = "CH Flame"
+BINARY_SENSOR_DHW_FLAME = "DHW Flame"
 BINARY_SENSOR_CH_AUTO_FUNCTION = "CH Auto Function"
 BINARY_SENSOR_HOLIDAY_MODE = "Holiday Mode"
 BINARY_SENSOR_ONLINE = "Online"
@@ -134,6 +135,7 @@ PARAM_ELECTRICITY_COST = "electricity_cost"
 # binary sensors
 PARAM_CH_AUTO_FUNCTION = "ch_auto_function"
 PARAM_CH_FLAME = "ch_flame"
+PARAM_DHW_FLAME = "dhw_flame"
 PARAM_FLAME = "flame"
 PARAM_HEAT_PUMP = "heat_pump"
 PARAM_HOLIDAY_MODE = "holiday_mode"
@@ -304,6 +306,7 @@ CONF_LOCALIZATION = "localization"
 CONF_UNITS = "units"
 CONF_POLLING_RATE = "polling_rate"
 CONF_INIT_AT_START = "init_during_start"
+CONF_DHW_FLAME_UNKNOWN_ON = "dhw_flame_unknown_as_on"
 
 MODE_TO_VALUE = {VAL_WINTER: 1, VAL_SUMMER: 0, VAL_OFF: 5, VAL_HEATING_ONLY: 2}
 VALUE_TO_MODE = {1: VAL_WINTER, 0: VAL_SUMMER, 5: VAL_OFF, 2: VAL_HEATING_ONLY}
