@@ -227,10 +227,9 @@ class AristonThermostat(ClimateDevice):
             if climate_mode != VAL_OFF:
                 if self._api._ariston_data["zone"]["heatRequest"]:
                     curr_hvac_action = CURRENT_HVAC_HEAT
-                    if self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
-                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
+                    if self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and self._api._dhw_trend_up and \
                             VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER] and \
-                            not self._api._device[CONF_DHW_AND_CH]:
+                            self._api._ariston_data["flameSensor"] and not self._api._device[CONF_DHW_AND_CH]:
                         curr_hvac_action = CURRENT_HVAC_IDLE
                 else:
                     curr_hvac_action = CURRENT_HVAC_IDLE

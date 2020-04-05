@@ -305,6 +305,8 @@ class AristonChecker():
         # initiate all other data
         self._data_lock = threading.Lock()
         self._device = device
+        self._dhw_history = [UNKNOWN_TEMP, UNKNOWN_TEMP, UNKNOWN_TEMP, UNKNOWN_TEMP]
+        self._dhw_trend_up = False
         self._errors = 0
         self._get_request_number_low_prio = 0
         self._get_request_number_high_prio = 0
@@ -639,6 +641,24 @@ class AristonChecker():
 
             self._ariston_data = copy.deepcopy(self._ariston_data_actual)
 
+            try:
+                self._dhw_trend_up = False
+                if len(self._dhw_history) > 3:
+                    del self._dhw_history[0]
+                if self._ariston_data["dhwStorageTemp"] != UNKNOWN_TEMP:
+                    for dhw_value in reversed(self._dhw_history):
+                        if dhw_value != UNKNOWN_TEMP:
+                            if self._ariston_data["dhwStorageTemp"] < dhw_value:
+                                # down trend
+                                break
+                            elif self._ariston_data["dhwStorageTemp"] > dhw_value:
+                                # up trend
+                                self._dhw_trend_up = True
+                                break
+                self._dhw_history.append(self._ariston_data["dhwStorageTemp"])
+            except:
+                pass
+
         elif request_type == REQUEST_GET_CH:
 
             try:
@@ -851,6 +871,8 @@ class AristonChecker():
                     json.dump(self._ariston_other_data, ariston_fetched)
                 with open('/config/data_' + self._name + '_temp_units.json', 'w') as ariston_fetched:
                     json.dump(self._ariston_units, ariston_fetched)
+                with open('/config/data_' + self._name + '_dhw_history.json', 'w') as ariston_fetched:
+                    json.dump(self._dhw_history, ariston_fetched)
                 if store_none_zero:
                     with open('/config/data_' + self._name + request_type + '_last_temp.json', 'w') as ariston_fetched:
                         json.dump([last_temp, last_temp_min, last_temp_max], ariston_fetched)

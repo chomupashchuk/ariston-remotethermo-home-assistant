@@ -252,10 +252,9 @@ class AristonBinarySensor(BinarySensorDevice):
                 self._state = False
                 try:
                     self._state = self._api._ariston_data["zone"]["heatRequest"]
-                    if self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and\
-                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
+                    if self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and self._api._dhw_trend_up and \
                             VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER] and \
-                            not self._api._device[CONF_DHW_AND_CH]:
+                            self._api._ariston_data["flameSensor"] and not self._api._device[CONF_DHW_AND_CH]:
                         self._state = False
                 except:
                     pass
@@ -267,9 +266,9 @@ class AristonBinarySensor(BinarySensorDevice):
                         self._state = True
                     elif self._api._ariston_data["flameForDhw"]:
                         self._state = True
-                    elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
-                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
-                            VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
+                    elif self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and self._api._dhw_trend_up and \
+                            VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER] and \
+                            self._api._ariston_data["flameSensor"]:
                         self._state = True
                     elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
                         self._state = True
