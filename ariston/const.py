@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.7"
+VERSION = "1.3.8"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
@@ -308,6 +308,7 @@ CONF_UNITS = "units"
 CONF_POLLING_RATE = "polling_rate"
 CONF_INIT_AT_START = "init_during_start"
 CONF_DHW_FLAME_UNKNOWN_ON = "dhw_flame_unknown_as_on"
+CONF_DHW_AND_CH = "dhw_and_ch_simultaneously"
 
 MODE_TO_VALUE = {VAL_WINTER: 1, VAL_SUMMER: 0, VAL_OFF: 5, VAL_HEATING_ONLY: 2}
 VALUE_TO_MODE = {1: VAL_WINTER, 0: VAL_SUMMER, 5: VAL_OFF, 2: VAL_HEATING_ONLY}
@@ -320,3 +321,5 @@ DHW_COMFORT_VALUE_TO_FUNCT = {0: VAL_DISABLED, 1: VAL_TIME_BASED, 2: VAL_ALWAYS_
 UNIT_TO_VALUE = {VAL_METRIC: 0, VAL_IMPERIAL: 1}
 VALUE_TO_UNIT = {0: VAL_METRIC, 1: VAL_IMPERIAL}
 PARAM_STRING_TO_VALUE = {"true": 1, "false": 0}
+
+INVALID_STORAGE_TEMP = 0

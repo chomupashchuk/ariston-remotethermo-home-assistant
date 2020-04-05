@@ -59,6 +59,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `polling_rate` - indicates timers to be used to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies and longer delays between the requests, which might be beneficial in case of slow Ariston responces due to internet connection for example. Default is `normal` to have faster responces.
   - `init_during_start` - indicates if integration data shall be fetched during Home Assistant start to have valid data when Home Assistant is started (no guarantee that it will succeeed). Value `true` delays the start time for longer and `false` for lesser period of time but initially all entities will be unavailable until data is fetched. Default value is `true`.
   - `dhw_flame_unknown_as_on` - indicates if unknown value of DHW to be tretaed as ON or OFF (gateway has position for DHW flame but it is never set, so intead value is based on `ch_flame` and `dhw_flame` and storage temperature if it is valid). Default value is `false`.
+  - `dhw_and_ch_simultaneously` indicates if DHW and CH flames can work together in specific hardware (Clas Evo and Genus One can heat only DHW or CH at one time). It affects if `ch_flame` shall be turned off forcefully when `dhw_flame` is suspected to be on. Default value is `false`.
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).

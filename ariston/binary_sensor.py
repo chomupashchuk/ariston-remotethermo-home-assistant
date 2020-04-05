@@ -16,6 +16,7 @@ from .const import (
     ARISTON_CH_AUTO_FUNCTION,
     ARISTON_THERMAL_CLEANSE_FUNCTION,
     CONF_DHW_FLAME_UNKNOWN_ON,
+    CONF_DHW_AND_CH,
     DATA_ARISTON,
     DEVICES,
     SERVICE_UPDATE,
@@ -51,6 +52,7 @@ from .const import (
     VALUE_TO_MODE,
     VAL_SUMMER,
     VAL_WINTER,
+    INVALID_STORAGE_TEMP,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -247,10 +249,15 @@ class AristonBinarySensor(BinarySensorDevice):
                     pass
 
             elif self._sensor_type == PARAM_CH_FLAME:
+                self._state = False
                 try:
                     self._state = self._api._ariston_data["zone"]["heatRequest"]
+                    if self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and\
+                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
+                            VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER] and \
+                            not self._api._device[CONF_DHW_AND_CH]:
+                        self._state = False
                 except:
-                    self._state = False
                     pass
 
             elif self._sensor_type == PARAM_DHW_FLAME:
@@ -261,7 +268,7 @@ class AristonBinarySensor(BinarySensorDevice):
                     elif self._api._ariston_data["flameForDhw"]:
                         self._state = True
                     elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
-                            self._api._ariston_data["dhwStorageTemp"] != 0 and \
+                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
                             VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
                         self._state = True
                     elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
