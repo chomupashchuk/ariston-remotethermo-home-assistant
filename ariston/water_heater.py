@@ -45,6 +45,7 @@ from .const import (
     VALUE_TO_MODE,
     VALUE_TO_DHW_MODE,
     UNKNOWN_TEMP,
+    INVALID_STORAGE_TEMP,
 )
 
 """STATE_SCAN_INTERVAL_SECS is used to scan changes in JSON data as command in '__init__' is not for checking and updating sensors"""
@@ -241,7 +242,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             elif self._api._ariston_data["flameForDhw"]:
                 action = ACTION_HEATING
             elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
-                    self._api._ariston_data["dhwStorageTemp"] != 0 and \
+                    self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
                     VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
                 action = ACTION_HEATING
             elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:

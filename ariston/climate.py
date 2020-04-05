@@ -30,6 +30,8 @@ from .const import (
     CONF_HVAC_OFF,
     CONF_HVAC_OFF_PRESENT,
     CONF_LOCALIZATION,
+    CONF_DHW_AND_CH,
+    INVALID_STORAGE_TEMP,
     LANG_LOCATION,
     DATA_ARISTON,
     DEVICES,
@@ -225,6 +227,11 @@ class AristonThermostat(ClimateDevice):
             if climate_mode != VAL_OFF:
                 if self._api._ariston_data["zone"]["heatRequest"]:
                     curr_hvac_action = CURRENT_HVAC_HEAT
+                    if self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
+                            self._api._ariston_data["dhwStorageTemp"] != INVALID_STORAGE_TEMP and \
+                            VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER] and \
+                            not self._api._device[CONF_DHW_AND_CH]:
+                        curr_hvac_action = CURRENT_HVAC_IDLE
                 else:
                     curr_hvac_action = CURRENT_HVAC_IDLE
             else:
