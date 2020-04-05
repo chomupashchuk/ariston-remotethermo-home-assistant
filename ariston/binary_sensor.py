@@ -260,11 +260,11 @@ class AristonBinarySensor(BinarySensorDevice):
                         self._state = True
                     elif self._api._ariston_data["flameForDhw"]:
                         self._state = True
-                    elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
-                        self._state = True
                     elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
                             self._api._ariston_data["dhwStorageTemp"] != 0 and \
                             VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
+                        self._state = True
+                    elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
                         self._state = True
                 except:
                     pass
