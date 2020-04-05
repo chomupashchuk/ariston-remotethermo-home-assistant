@@ -46,15 +46,11 @@ from .const import (
     BINARY_SENSOR_CH_PILOT,
     BINARY_SENSOR_UPDATE,
     VERSION,
-    GET_REQUEST_CH_PROGRAM,
-    GET_REQUEST_CURRENCY,
-    GET_REQUEST_DHW_PROGRAM,
-    GET_REQUEST_ERRORS,
-    GET_REQUEST_GAS,
-    GET_REQUEST_MAIN,
     GET_REQUEST_PARAM,
-    GET_REQUEST_UNITS,
     GET_REQUEST_VERSION,
+    VALUE_TO_MODE,
+    VAL_SUMMER,
+    VAL_WINTER,
 )
 from .exceptions import AristonError
 from .helpers import log_update_error, service_signal
@@ -265,6 +261,10 @@ class AristonBinarySensor(BinarySensorDevice):
                     elif self._api._ariston_data["flameForDhw"]:
                         self._state = True
                     elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
+                        self._state = True
+                    elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
+                            self._api._ariston_data["dhwStorageTemp"] != 0 and \
+                            VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
                         self._state = True
                 except:
                     pass

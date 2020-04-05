@@ -1,8 +1,8 @@
 """Support for Ariston water heaters."""
-import logging
-from datetime import timedelta
 import json
+import logging
 import os
+from datetime import timedelta
 
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
@@ -41,7 +41,6 @@ from .const import (
     VAL_MANUAL,
     VAL_PROGRAM,
     VAL_AUTO,
-    VAL_METRIC,
     VAL_IMPERIAL,
     VALUE_TO_MODE,
     VALUE_TO_DHW_MODE,
@@ -242,6 +241,10 @@ class AristonWaterHeater(WaterHeaterDevice):
             elif self._api._ariston_data["flameForDhw"]:
                 action = ACTION_HEATING
             elif self._api._device[CONF_DHW_FLAME_UNKNOWN_ON] and self._api._ariston_data["flameSensor"]:
+                action = ACTION_HEATING
+            elif self._api._ariston_data["dhwStorageTemp"] < self._api._ariston_data["dhwTemp"]["value"] and \
+                    self._api._ariston_data["dhwStorageTemp"] != 0 and \
+                    VALUE_TO_MODE[self._api._ariston_data["mode"]] in [VAL_SUMMER, VAL_WINTER]:
                 action = ACTION_HEATING
         except:
             pass

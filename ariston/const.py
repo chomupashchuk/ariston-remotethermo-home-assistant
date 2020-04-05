@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.5"
+VERSION = "1.3.6"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
@@ -197,6 +197,7 @@ GET_REQUEST_MAIN = [
     PARAM_HEAT_PUMP,
     PARAM_CH_PILOT,
     PARAM_CH_FLAME,
+    PARAM_DHW_FLAME,
     PARAM_FLAME
 ]
 GET_REQUEST_PARAM = [

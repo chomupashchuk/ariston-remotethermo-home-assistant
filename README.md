@@ -58,7 +58,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `units` - which uniots to be used. Values are: `metric` (°C-bar-kW...), `imperial` (°F-psi-kBtu/h...), `auto` (detect automatically, which takes additional time). Default is `metric`.
   - `polling_rate` - indicates timers to be used to read or set data. Values are `normal` and `long`. Long means waiting longer for http replies and longer delays between the requests, which might be beneficial in case of slow Ariston responces due to internet connection for example. Default is `normal` to have faster responces.
   - `init_during_start` - indicates if integration data shall be fetched during Home Assistant start to have valid data when Home Assistant is started (no guarantee that it will succeeed). Value `true` delays the start time for longer and `false` for lesser period of time but initially all entities will be unavailable until data is fetched. Default value is `true`.
-  - `dhw_flame_unknown_as_on` - indicates if unknown value of DHW to be tretaed as ON or OFF (gateway has position for DHW flame but it is never set, so intead value is based on `ch_flame` and `dhw_flame`). Default value is `false`.
+  - `dhw_flame_unknown_as_on` - indicates if unknown value of DHW to be tretaed as ON or OFF (gateway has position for DHW flame but it is never set, so intead value is based on `ch_flame` and `dhw_flame` and storage temperature if it is valid). Default value is `false`.
 
 #### Switches
   - `power` - turn power off and on (on value is defined by `power_on` attribute).
@@ -109,7 +109,7 @@ Store contents of `icons` folder in `\config\www\icons` folder. Since builtin ic
   - `ch_flame` - if CH heating is ongoing.
   - `ch_pilot` - CH Pilot mode.
   - `changing_data` - if change of data via Home Assistant is ongoing.
-  - `dhw_flame` - if DHW heating is ongoing.
+  - `dhw_flame` - if DHW heating is ongoing (not fetched but calculated based on `ch_flame`, `flame`, and if valid then `dhw_storage_temperature` and `dhw_set_temperature`, and `dhw_flame_unknown_as_on` for invalid `dhw_storage_temperature`).
   - `dhw_thermal_cleanse_function` - DHW thermal cleanse function enabled.
   - `flame` - if any type of heating water (DHW or CH).
   - `heat_pump` - if heating pump is ON. Not supported on all models.
