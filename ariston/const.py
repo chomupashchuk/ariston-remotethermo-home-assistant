@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.10"
+VERSION = "1.3.11"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
