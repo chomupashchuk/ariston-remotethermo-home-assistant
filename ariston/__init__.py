@@ -553,8 +553,10 @@ class AristonChecker():
                 pass
             try:
                 self._ariston_data_actual = copy.deepcopy(resp.json())
+                dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
             except:
                 self._ariston_data_actual = {}
+                dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
                 _LOGGER.warning("%s Invalid data received for Main, not JSON", self)
                 raise CommError
             try:
@@ -1039,6 +1041,7 @@ class AristonChecker():
                 _LOGGER.error("%s is offline: Too many errors", self._name)
                 dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
             raise AristonError
+        _LOGGER.info("%s data fetched successfully, available %s", self._name, self.available)
         with self._lock:
             was_offline = not self.available
             self._errors = 0

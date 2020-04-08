@@ -141,12 +141,12 @@ class AristonBinarySensor(BinarySensorDevice):
     @property
     def available(self):
         """Return True if entity is available."""
-        if self._sensor_type in GET_REQUEST_PARAM:
+        if self._sensor_type == PARAM_ONLINE:
+            return True
+        elif self._sensor_type in GET_REQUEST_PARAM:
             return self._api.available and self._api._ariston_other_data != {}
         elif self._sensor_type in GET_REQUEST_VERSION:
             return self._api._version != ""
-        elif self._sensor_type == PARAM_ONLINE:
-            return True
         else:
             return self._api.available and self._api._ariston_data != {}
 
