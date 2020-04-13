@@ -9,6 +9,7 @@
         "winter": "Winter"
     },
     "water_heater_operation": {
+        "default": "Default",
         "heating_only": "Heating only",
         "initiating": "Initiating",
         "manual": "Manual",

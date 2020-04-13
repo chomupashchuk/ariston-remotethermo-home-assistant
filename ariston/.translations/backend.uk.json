@@ -9,6 +9,7 @@
         "winter": "Зима"
     },
     "water_heater_operation": {
+        "default": "За замовченням",
         "heating_only": "Лише опалення",
         "initiating": "Ініціалізування",
         "manual": "Ручний",

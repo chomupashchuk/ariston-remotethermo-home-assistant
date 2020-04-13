@@ -9,6 +9,7 @@
         "winter": "Zima"
     },
     "water_heater_operation": {
+        "default": "Domyślne",
         "heating_only": "Tylko ogrzewanie",
         "initiating": "Inicjowanie",
         "manual": "Ręczny",
