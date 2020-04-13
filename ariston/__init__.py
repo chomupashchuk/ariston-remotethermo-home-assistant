@@ -565,13 +565,15 @@ class AristonChecker():
                     if allowed_modes != []:
                         self._ariston_data_actual["allowedModes"] = allowed_modes
                     else:
-                        self._ariston_data_actual["allowedModes"] = DEFAULT_MODES
+                        self._ariston_data_actual = {}
+                        raise
                 # force default CH modes if received none
                 if self._ariston_data_actual["zone"]["mode"]["allowedOptions"] == []:
                     if allowed_ch_modes != []:
                         self._ariston_data_actual["zone"]["mode"]["allowedOptions"] = allowed_ch_modes
                     else:
-                        self._ariston_data_actual["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+                        self._ariston_data_actual = {}
+                        raise
                 # keep latest DHW storage temperature if received invalid
                 if self._ariston_data_actual["dhwStorageTemp"] == UNKNOWN_TEMP:
                     if last_temp[PARAM_DHW_STORAGE_TEMPERATURE] != UNKNOWN_TEMP:
@@ -636,8 +638,8 @@ class AristonChecker():
                 else:
                     self._get_zero_temperature[PARAM_CH_SET_TEMPERATURE] = 0
             except:
-                self._ariston_data_actual["allowedModes"] = DEFAULT_MODES
-                self._ariston_data_actual["zone"]["mode"]["allowedOptions"] = DEFAULT_CH_MODES
+                self._ariston_data_actual = {}
+                dispatcher_send(self._hass, service_signal(SERVICE_UPDATE, self._name))
                 _LOGGER.warning("%s Invalid data received for Main", self)
                 raise CommError
 
@@ -773,10 +775,12 @@ class AristonChecker():
                         if "dhwTimeProgComfortTemp" in self._ariston_data_actual and "value" in \
                                 self._ariston_data_actual["dhwTimeProgComfortTemp"]:
                             self._ariston_data_actual["dhwTimeProgComfortTemp"]["value"] = param_item["value"]
+                            self._ariston_data["dhwTimeProgComfortTemp"]["value"] = param_item["value"]
                     elif param_item["id"] == ARISTON_DHW_TIME_PROG_ECONOMY and param_item["value"] != UNKNOWN_TEMP:
                         if "dhwTimeProgEconomyTemp" in self._ariston_data_actual and "value" in \
                                 self._ariston_data_actual["dhwTimeProgEconomyTemp"]:
                             self._ariston_data_actual["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
+                            self._ariston_data["dhwTimeProgEconomyTemp"]["value"] = param_item["value"]
                     elif param_item["id"] == ARISTON_CH_COMFORT_TEMP:
                         # keep latest CH comfort temperature if received invalid
                         if param_item["value"] == UNKNOWN_TEMP:

@@ -299,7 +299,7 @@ class AristonWaterHeater(WaterHeaterDevice):
             else:
                 current_op = current_mode
         except:
-            current_op = VAL_NOT_READY
+            current_op = VAL_OFFLINE
             pass
         if current_op in self._operations_translate:
             # translate current operation

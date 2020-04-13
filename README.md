@@ -161,6 +161,16 @@ data:
     ch_comfort_temperature: 20.5
 ```
 
+## Some known issues and workarounds
+
+### Climate and water_heater entity become unavailable
+Since integration interacts with server, which interacts with boiler directly or via gateway, it is possible that some link in the chain is not working. Integration is designed to constantly retry the connection (requests are sent more reearely in case of multiple faults to reduce load on whole chain). Mostly connection recovers in time, but sometimes restart of router or boiler can help (but not always).
+
+### Only part of data becomes unavailable after it was available
+Even though many functions are not accessible via integration once boiler configuration (parameter 228 in the menu) changed from 1 (boiler with water heater sensor) to 0 (default configuration without sensor), possibly due to packets corruption on the way or some specific bit sequence. It caused Genus One model not being able to handle DHW. The solution is to enter boiler menu directly and change the value of parameter 228.
+Also boiler might require restart (complete loss of power).
+
+
 ## Provide New localizations
 Please see files under `/ariston/.translations/` and take files like `backend.en.json` and `sensor.en.json` as a base. Create files with corresponding name that represent desired language (must be compliant with BCP47) and input translated data into created files from the right side of the data (left side is internal values used by the integration and right side are the values to be shown in the frontend). Then please provide me with mentioned 2 files in order to be included in the integration (to include new language in `LANG_LIST` within `const.py` and make it available for everyone). 
 
