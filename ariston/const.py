@@ -1,6 +1,6 @@
 """Constants for Ariston component."""
 
-VERSION = "1.3.12"
+VERSION = "1.3.13"
 
 # sensor names and values
 SENSOR_ACCOUNT_CH_GAS = "Account CH Gas Use"
@@ -86,7 +86,7 @@ LANG_UK = "uk"
 LANG_EN = "en"
 LANG_PL = "pl"
 LANG_LIST = [LANG_UK, LANG_EN, LANG_PL]
-LANG_LOCATION = "/config/custom_components/ariston/.translations/"
+LANG_LOCATION = "/config/custom_components/ariston/translations/"
 
 DOMAIN = "ariston"
 DATA_ARISTON = DOMAIN
