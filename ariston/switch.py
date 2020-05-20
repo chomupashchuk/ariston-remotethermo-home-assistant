@@ -1,7 +1,7 @@
 """Suppoort for Ariston switch."""
 from datetime import timedelta
 
-from homeassistant.components.switch import SwitchDevice
+from homeassistant.components.switch import SwitchEntity
 from homeassistant.const import CONF_SWITCHES, CONF_NAME
 
 from .const import (
@@ -65,7 +65,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 
-class AristonSwitch(SwitchDevice):
+class AristonSwitch(SwitchEntity):
     """Switch for Ariston."""
 
     def __init__(self, name, device, switch_type):

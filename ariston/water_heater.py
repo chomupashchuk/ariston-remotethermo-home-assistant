@@ -7,7 +7,7 @@ from datetime import timedelta
 from homeassistant.components.water_heater import (
     SUPPORT_OPERATION_MODE,
     SUPPORT_TARGET_TEMPERATURE,
-    WaterHeaterDevice,
+    WaterHeaterEntity,
 )
 from homeassistant.const import (
     ATTR_TEMPERATURE,
@@ -100,7 +100,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     add_entities([AristonWaterHeater(name, device)])
 
 
-class AristonWaterHeater(WaterHeaterDevice):
+class AristonWaterHeater(WaterHeaterEntity):
     """Ariston Water Heater Device."""
 
     def __init__(self, name, device):

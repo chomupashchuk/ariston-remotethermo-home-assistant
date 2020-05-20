@@ -5,7 +5,7 @@ from datetime import timedelta
 from homeassistant.components.binary_sensor import (
     DEVICE_CLASS_CONNECTIVITY,
     DEVICE_CLASS_HEAT,
-    BinarySensorDevice,
+    BinarySensorEntity,
 )
 from homeassistant.const import CONF_BINARY_SENSORS, CONF_NAME
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -98,7 +98,7 @@ async def async_setup_platform(hass, config, async_add_entities, discovery_info=
     )
 
 
-class AristonBinarySensor(BinarySensorDevice):
+class AristonBinarySensor(BinarySensorEntity):
     """Binary sensor for Ariston."""
 
     def __init__(self, name, device, sensor_type):

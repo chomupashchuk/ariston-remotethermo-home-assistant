@@ -6,7 +6,7 @@ from datetime import timedelta
 import json
 import os
 
-from homeassistant.components.climate import ClimateDevice
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_IDLE,
@@ -88,7 +88,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     add_entities([AristonThermostat(name, device)])
 
 
-class AristonThermostat(ClimateDevice):
+class AristonThermostat(ClimateEntity):
     """Representation of a Ariston Thermostat."""
 
     def __init__(self, name, device):
