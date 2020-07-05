@@ -1,4 +1,5 @@
 # Ariston NET remotethermo integration for Home Assistant
+**THIS VERSION IS NO LONGER MAINTAINED, SEE INSTEAD  **
 Thin integration is a side project (my first integration) and was tested only with 1 zone climate. It logs in to Ariston website and fetches/sets data on that site.
 You are free to modify and distribute it, but it is distributed 'as is' with no liability (see license file).
 
